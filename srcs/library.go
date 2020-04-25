@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	// mysql connector
-	"crypto/sha256"
-	"encoding/hex"
 	_ "github.com/go-sql-driver/mysql"
 	sqlx "github.com/jmoiron/sqlx"
 )
@@ -20,13 +18,6 @@ type Library struct {
 	db *sqlx.DB
 }
 
-func getSHA256(input string) string {
-	hash := sha256.New()
-	hash.Write([]byte(input))
-	bytes := hash.Sum(nil)
-	hashCode := hex.EncodeToString(bytes)
-	return hashCode
-}
 func (lib *Library) ConnectDB() {
 	db, err := sqlx.Open("mysql", fmt.Sprintf("%s:%s@tcp(127.0.0.1:3306)/%s", User, Password, DBName))
 	if err != nil {
@@ -37,7 +28,8 @@ func (lib *Library) ConnectDB() {
 
 // CreateTables created the tables in MySQL
 func (lib *Library) CreateTables() error {
-	//err := resetbook(lib)
+	err := fmt.Errorf("0")
+	//err = resetbook(lib)
 	//if err != nil {
 	//	return err
 	//}
@@ -49,7 +41,7 @@ func (lib *Library) CreateTables() error {
 	//if err != nil {
 	//	return err
 	//}
-	err := createbook(lib)
+	err = createbook(lib)
 	if err != nil {
 		return err
 	}
@@ -66,11 +58,16 @@ func (lib *Library) CreateTables() error {
 
 // AddBook add a book into the library
 func (lib *Library) AddBook(title, auther, ISBN string) error {
+
 	return nil
 }
 
 // etc...
-
+func (lib *Library) CreateUser(username string, password string) error {
+	user1 := user{username, password}
+	err := createuser(&user1, lib)
+	return err
+}
 func main() {
 	fmt.Println("Welcome to the Library Management System!")
 }
