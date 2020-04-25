@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type Book struct {
 	title  string
 	author string
@@ -25,6 +27,8 @@ func createbook(lib *Library) error {
 `)
 	return err
 }
-func addbook(lib *Library) error {
-	return nil
+func addbook(book *Book, lib *Library) error {
+	exec := fmt.Sprintf("insert into book(title, author, ISBN) values ('%s','%s','%s')", book.title, book.author, book.ISBN)
+	_, err := lib.db.Exec(exec)
+	return err
 }

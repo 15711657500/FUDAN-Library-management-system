@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-type user struct {
+type User struct {
 	username string
 	password string
 }
@@ -35,7 +35,7 @@ func getSHA256(input string) string {
 	hashCode := hex.EncodeToString(bytes)
 	return hashCode
 }
-func createuser(user *user, lib *Library) error {
+func createuser(user *User, lib *Library) error {
 	username1, password1 := user.username, user.password
 	query := fmt.Sprintf("select count(*) from users where username = '%s'", username1)
 	rows, err := lib.db.Queryx(query)
@@ -50,7 +50,7 @@ func createuser(user *user, lib *Library) error {
 		return err
 	}
 	if j != 0 {
-		err = fmt.Errorf("already exist")
+		err = fmt.Errorf("already exists")
 		return err
 	}
 	password1 = getSHA256(password1)
@@ -61,7 +61,7 @@ func createuser(user *user, lib *Library) error {
 	}
 	return nil
 }
-func login(user *user, lib *Library) error {
+func login(user *User, lib *Library) error {
 	wrong := fmt.Errorf("No such user, or wrong password!")
 	username1, password1 := user.username, user.password
 	password1 = getSHA256(password1)
@@ -82,9 +82,9 @@ func login(user *user, lib *Library) error {
 	if err != nil {
 		return err
 	}
-	password2 := ""
+	var password2 string
 	for rows2.Next() {
-		rows.Scan(&password2)
+		err = rows2.Scan(&password2)
 	}
 	if password1 != password2 {
 		return wrong

@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	User     = "root"
+	USER     = "root"
 	Password = "xxx"
 	DBName   = "ass3"
 )
@@ -19,7 +19,7 @@ type Library struct {
 }
 
 func (lib *Library) ConnectDB() {
-	db, err := sqlx.Open("mysql", fmt.Sprintf("%s:%s@tcp(127.0.0.1:3306)/%s", User, Password, DBName))
+	db, err := sqlx.Open("mysql", fmt.Sprintf("%s:%s@tcp(127.0.0.1:3306)/%s", USER, Password, DBName))
 	if err != nil {
 		panic(err)
 	}
@@ -58,14 +58,23 @@ func (lib *Library) CreateTables() error {
 
 // AddBook add a book into the library
 func (lib *Library) AddBook(title, auther, ISBN string) error {
-
-	return nil
+	book1 := Book{title, auther, ISBN}
+	err := addbook(&book1, lib)
+	return err
+}
+func (lib *Library) CreateUser(username string, password string) error {
+	user1 := User{username, password}
+	err := createuser(&user1, lib)
+	return err
 }
 
-// etc...
-func (lib *Library) CreateUser(username string, password string) error {
-	user1 := user{username, password}
-	err := createuser(&user1, lib)
+func (lib *Library) Login(username string, password string) error {
+	user1 := User{username, password}
+	err := login(&user1, lib)
+	return err
+}
+func (lib *Library) Rent(book *Book, user *User) error {
+	err := rent(book, user, lib)
 	return err
 }
 func main() {
