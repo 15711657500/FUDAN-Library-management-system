@@ -29,19 +29,20 @@ func TestLibrary_Login(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 }
-func TestLibrary_AddBook(t *testing.T) {
-	lib := Library{}
-	lib.ConnectDB()
-	err := lib.AddBook("a", "b", "c")
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-}
-func TestLibrary_Rent(t *testing.T) {
-	lib := Library{}
-	lib.ConnectDB()
-	err := lib.Rent(&Book{"a", "b", "c"}, &User{"abc", "abc"})
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-}
+
+//func TestLibrary_AddBook(t *testing.T) {
+//	lib := Library{}
+//	lib.ConnectDB()
+//	err := lib.AddBook("a", "b", "c")
+//	if err != nil {
+//		t.Errorf(err.Error())
+//	}
+//}
+//func TestLibrary_Rent(t *testing.T) {
+//	lib := Library{}
+//	lib.ConnectDB()
+//	err := lib.Rent(&Book{"a", "b", "c"}, &User{"abc", "abc"})
+//	if err != nil {
+//		t.Errorf(err.Error())
+//	}
+//}

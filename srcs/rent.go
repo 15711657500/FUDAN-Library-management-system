@@ -21,11 +21,11 @@ func createrent(lib *Library) error {
 (
     rentdate varchar(50),
     duedate varchar(50),
-    returndate varchar(50),
+    returndate varchar(50) default "not returned yet",
     fine float default 0,
     rentid int primary key auto_increment,
-    username varchar(50) references user(username),
-    bookid int references book(bookid),
+    username varchar(50) references users(username),
+    bookid int references singlebook(bookid),
     extend int default 0
 );
 `)
