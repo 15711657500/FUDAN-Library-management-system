@@ -21,9 +21,9 @@ func createusers(lib *Library) error {
 	_, err := lib.db.Exec(`
 	create table if not exists users
 (
-    username varchar(50) primary key,
-    password varchar(150),
-    permission varchar(10) default "default"
+    username nvarchar(200) primary key,
+    password nvarchar(200),
+    permission nvarchar(200) default "default"
 );
 `)
 	return err
@@ -35,7 +35,7 @@ func getSHA256(input string) string {
 	hashCode := hex.EncodeToString(bytes)
 	return hashCode
 }
-func createuser(user *User, lib *Library) error {
+func createuser(user *User, lib *Library, admin bool) error {
 	username1, password1 := user.username, user.password
 	query := fmt.Sprintf("select count(*) from users where username = '%s'", username1)
 	rows, err := lib.db.Queryx(query)
@@ -54,11 +54,17 @@ func createuser(user *User, lib *Library) error {
 		return err
 	}
 	password1 = getSHA256(password1)
-	exec := fmt.Sprintf("insert into users(username, password) values ('%s', '%s')", username1, password1)
+	var exec string
+	if admin {
+		exec = fmt.Sprintf("insert ignore into users(username, password, permission) values ('%s', '%s', 'admin')", username1, password1)
+	} else {
+		exec = fmt.Sprintf("insert ignore into users(username, password) values ('%s', '%s')", username1, password1)
+	}
 	_, err = lib.db.Exec(exec)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 func login(user *User, lib *Library) error {

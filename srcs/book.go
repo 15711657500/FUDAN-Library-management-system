@@ -13,20 +13,21 @@ type SingleBook struct {
 }
 
 func resetbook(lib *Library) error {
-	_, err := lib.db.Exec(`drop table if exists booklist`)
+
+	_, err := lib.db.Exec(`drop table if exists singlebook`)
 	if err != nil {
 		return err
 	}
-	_, err = lib.db.Exec(`drop table if exists singlebook`)
+	_, err = lib.db.Exec(`drop table if exists booklist`)
 	return err
 }
 func createbook(lib *Library) error {
 	_, err := lib.db.Exec(`
 	create table if not exists booklist
 (
-    title     varchar(50),
-    author    varchar(50),
-    ISBN      varchar(100) primary key,
+    title     nvarchar(200),
+    author    nvarchar(200),
+    ISBN      nvarchar(200) primary key,
     visits 	  int default 0
 );
 `)
@@ -36,9 +37,10 @@ func createbook(lib *Library) error {
 	_, err = lib.db.Exec(`
 	create table if not exists singlebook
 (
-    ISBN      varchar(100) references booklist(ISBN) on delete cascade,
-    bookid 	  varchar(100) primary key,
-    available bool default true
+    ISBN      nvarchar(200),
+    bookid 	  nvarchar(200) primary key,
+    available bool default true,
+    foreign key (ISBN) references booklist(ISBN) on delete cascade
 )
 `)
 	return err

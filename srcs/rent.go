@@ -5,8 +5,14 @@ import (
 	"time"
 )
 
+var (
+	du         time.Duration = 30
+	maxrent    int           = 30
+	maxoverdue int           = 3
+)
+
 const (
-	du = 30
+	dateformat = "2006-01-02 15:04:05"
 )
 
 func resetrent(lib *Library) error {
@@ -19,14 +25,16 @@ func createrent(lib *Library) error {
 	_, err := lib.db.Exec(`
 	create table if not exists rent
 (
-    rentdate varchar(50),
-    duedate varchar(50),
-    returndate varchar(50) default "not returned yet",
+    rentdate nvarchar(200),
+    duedate nvarchar(200),
+    returndate nvarchar(200) default "not returned yet",
     fine float default 0,
     rentid int primary key auto_increment,
-    username varchar(50) references users(username),
-    bookid int references singlebook(bookid),
-    extend int default 0
+    username nvarchar(200),
+    bookid nvarchar(200),
+    extend int default 0,
+	foreign key (username) references users(username),
+	foreign key (bookid) references singlebook(bookid)
 );
 `)
 	return err
@@ -51,7 +59,7 @@ func rent(book *Book, user *User, lib *Library) error {
 	}
 
 	// set available = 0, insert information into rent
-	dateformat := "2006-01-02 15:04:05"
+
 	exec1 := fmt.Sprintf("update book set available = 0 where bookid = %d", bookid)
 	_, err = lib.db.Exec(exec1)
 	if err != nil {
@@ -65,4 +73,108 @@ func rent(book *Book, user *User, lib *Library) error {
 		return err
 	}
 	return nil
+}
+func querybookbyISBN(ISBN string, lib *Library) ([]Book, error) {
+	var books []Book
+	query := fmt.Sprintf("select title, author, ISBN from booklist where ISBN = '%s'", ISBN)
+	rows, err := lib.db.Queryx(query)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var a, b, c string
+		err = rows.Scan(&a, &b, &c)
+		if err != nil {
+			return nil, err
+		}
+		books = append(books, Book{a, b, c})
+	}
+	return books, nil
+}
+func querybookbyauthor(author string, lib *Library) ([]Book, error) {
+	var books []Book
+	query := fmt.Sprintf("select title, author, ISBN from booklist where author = '%s'", author)
+	rows, err := lib.db.Queryx(query)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var a, b, c string
+		err = rows.Scan(&a, &b, &c)
+		if err != nil {
+			return nil, err
+		}
+		books = append(books, Book{a, b, c})
+	}
+	return books, nil
+}
+func querybookbytitle(title string, lib *Library) ([]Book, error) {
+	var books []Book
+	query := fmt.Sprintf("select title, author, ISBN from booklist where title like '%%%s%%'", title)
+	rows, err := lib.db.Queryx(query)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var a, b, c string
+		err = rows.Scan(&a, &b, &c)
+		if err != nil {
+			return nil, err
+		}
+		books = append(books, Book{a, b, c})
+	}
+	return books, nil
+}
+func querysinglebookbyISBN(ISBN string, lib *Library) ([]SingleBook, error) {
+	var books []SingleBook
+	query := fmt.Sprintf("select ISBN, bookid from singlebook where ISBN = '%s'", ISBN)
+	rows, err := lib.db.Queryx(query)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var a, b string
+		err = rows.Scan(&a, &b)
+		if err != nil {
+			return nil, err
+		}
+		books = append(books, SingleBook{a, b})
+	}
+	return books, nil
+}
+func checkrent(username string, lib *Library) (bool, error) {
+	// exceed rent limit
+	query1 := fmt.Sprintf("select count(*) from rent where username = '%s' and returndate = 'not returned yet'", username)
+	rows1, err1 := lib.db.Queryx(query1)
+	if err1 != nil {
+		return false, err1
+	}
+	var i1 int
+	for rows1.Next() {
+		err1 = rows1.Scan(&i1)
+		if err1 != nil {
+			return false, err1
+		}
+	}
+	if i1 > maxrent {
+		return false, nil
+	}
+	// exceed overdue limit
+	now := time.Now().Format(dateformat)
+	query2 := fmt.Sprintf("select count(*) from rent where username = '%s' and returndate = 'not returned yet' and duedate < '%s'", username, now)
+	rows2, err2 := lib.db.Queryx(query2)
+	if err2 != nil {
+		return false, err2
+	}
+	var i2 int
+	for rows2.Next() {
+		err2 = rows2.Scan(&i2)
+		if err2 != nil {
+			return false, err2
+		}
+	}
+	if i2 > maxoverdue {
+		return false, nil
+	}
+	return true, nil
 }
