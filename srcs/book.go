@@ -43,6 +43,17 @@ func createbook(lib *Library) error {
     foreign key (ISBN) references booklist(ISBN) on delete cascade
 )
 `)
+	if err != nil {
+		return err
+	}
+	_, err = lib.db.Exec(`
+	create table if not exists removelist
+(
+    bookid nvarchar(200) primary key,
+    detail nvarchar(200) default "The book is lost.",
+    foreign key (bookid) references singlebook(bookid) on delete cascade
+)
+`)
 	return err
 }
 func addbook(book *Book, lib *Library) error {
@@ -53,5 +64,25 @@ func addbook(book *Book, lib *Library) error {
 func addsinglebook(book *SingleBook, lib *Library) error {
 	exec := fmt.Sprintf("insert ignore into singlebook(ISBN, bookid) values ('%s','%s')", book.ISBN, book.bookid)
 	_, err := lib.db.Exec(exec)
+	return err
+}
+func removesinglebook(bookid string, detail string, lib *Library) error {
+	query := fmt.Sprintf("select count(*) from singlebook where bookid = '%s' and available = 1", bookid)
+	rows, err := lib.db.Queryx(query)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var i int
+		err = rows.Scan(&i)
+		if err != nil {
+			return err
+		}
+		if i != 1 {
+			return fmt.Errorf("removed of not returned")
+		}
+	}
+	exec := fmt.Sprintf("insert into removelist(bookid, detail) values ('%s','%s')", bookid, detail)
+	_, err = lib.db.Exec(exec)
 	return err
 }

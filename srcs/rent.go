@@ -11,6 +11,17 @@ var (
 	maxoverdue int           = 3
 )
 
+type Rent struct {
+	rentdate   string
+	duedate    string
+	returndate string
+	fine       float32
+	bookid     string
+	ISBN       string
+	title      string
+	author     string
+}
+
 const (
 	dateformat = "2006-01-02 15:04:05"
 )
@@ -39,40 +50,41 @@ func createrent(lib *Library) error {
 `)
 	return err
 }
-func rent(book *Book, user *User, lib *Library) error {
-	// choose an available book
-	notfound := fmt.Errorf("111")
-	bookid := 0
-	title, author, ISBN := book.title, book.author, book.ISBN
-	found := false
-	query1 := fmt.Sprintf("select bookid from book where title = '%s' and author = '%s' and ISBN = '%s' and available = 1 order by bookid desc", title, author, ISBN)
+func rentsinglebook(bookid string, username string, lib *Library) error {
+	restricted := fmt.Errorf("Not able to borrow!")
+	// check the user
+	able, err := checkrent(username, lib)
+	if err != nil {
+		return err
+	}
+	if !able {
+		return restricted
+	}
+	query1 := fmt.Sprintf("select count(*) from singlebook where bookid = '%s' and available = 1", bookid)
 	rows, err := lib.db.Queryx(query1)
 	if err != nil {
 		return err
 	}
 	for rows.Next() {
-		rows.Scan(&bookid)
-		found = true
+		var i int
+		err = rows.Scan(&i)
+		if err != nil {
+			return err
+		}
+		if i != 1 {
+			return restricted
+		}
 	}
-	if !found {
-		return notfound
-	}
-
-	// set available = 0, insert information into rent
-
-	exec1 := fmt.Sprintf("update book set available = 0 where bookid = %d", bookid)
+	rentdate := time.Now().Format(dateformat)
+	duedate := time.Unix(time.Now().Unix(), int64(du*time.Hour*24)).Format(dateformat)
+	exec1 := fmt.Sprintf("insert into rent(bookid, username, rentdate, duedate) values ('%s','%s', '%s', '%s')", bookid, username, rentdate, duedate)
 	_, err = lib.db.Exec(exec1)
 	if err != nil {
 		return err
 	}
-	rentdate := time.Now().Format(dateformat)
-	duedate := time.Unix(time.Now().Unix(), int64(du*time.Hour*24)).Format(dateformat)
-	exec2 := fmt.Sprintf("insert into rent(rentdate, duedate, username, bookid) values ('%s','%s','%s','%d')", rentdate, duedate, user.username, bookid)
+	exec2 := fmt.Sprintf("updata singlebook set available = 0 where bookid = '%s'", bookid)
 	_, err = lib.db.Exec(exec2)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 func querybookbyISBN(ISBN string, lib *Library) ([]Book, error) {
 	var books []Book
@@ -177,4 +189,103 @@ func checkrent(username string, lib *Library) (bool, error) {
 		return false, nil
 	}
 	return true, nil
+}
+func returnsinglebook(bookid string, username string, lib *Library) error {
+	notfound := fmt.Errorf("unable to return!")
+	query := fmt.Sprintf("select count(*), rentid from rent where bookid = '%s' and username = '%s' and returndate = 'not returned yet'", bookid, username)
+	rows, err := lib.db.Queryx(query)
+	var rentid int
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var i int
+		err = rows.Scan(&i, &rentid)
+		if err != nil {
+			return err
+		}
+		if i != 1 {
+			return notfound
+		}
+	}
+	returndate := time.Now().Format(dateformat)
+	exec1 := fmt.Sprintf("update rent set returndate = '%s' where rentid = %d", returndate, rentid)
+	_, err = lib.db.Exec(exec1)
+	if err != nil {
+		return err
+	}
+	exec2 := fmt.Sprintf("update singlebook set available = 1 where bookid = '%s'", bookid)
+	_, err = lib.db.Exec(exec2)
+	return err
+}
+func queryrentrecord(username string, lib *Library) ([]Rent, error) {
+	var rentdate, duedate, returndate, bookid, ISBN, title, author string
+	var fine float32
+	var rent []Rent
+	query := fmt.Sprintf(`select rentdate, duedate, returndate, fine, rent.bookid, booklist.ISBN, title, author 
+								from rent, booklist, singlebook 
+								where username = '%s' and rent.bookid = singlebook.bookid 
+								and singlebook.ISBN = booklist.ISBN
+								order by rentdate`, username)
+	rows, err := lib.db.Queryx(query)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		err = rows.Scan(&rentdate, &duedate, &returndate, &fine, &bookid, &ISBN, &title, &author)
+		if err != nil {
+			return nil, err
+		}
+		rent = append(rent, Rent{rentdate, duedate, returndate, fine, bookid, ISBN, title, author})
+
+	}
+	return rent, nil
+}
+func queryduedate(bookid string, lib *Library) (string, error) {
+	notfound := fmt.Errorf("You have not borrowed this book!")
+	query1 := fmt.Sprintf("select count(*), duedate from rent where returndate = 'not returned yet' and bookid = '%s'", bookid)
+	rows1, err := lib.db.Queryx(query1)
+	if err != nil {
+		return "", err
+	}
+	var duedate string
+	for rows1.Next() {
+		var i int
+		err = rows1.Scan(&i, &duedate)
+		if err != nil {
+			return "", err
+		}
+		if i != 1 {
+			return "", notfound
+		}
+	}
+	return duedate, nil
+}
+func extend(bookid string, username string, lib *Library) error {
+	fail := fmt.Errorf("Unable to extend!")
+	query1 := fmt.Sprintf("select count(*), duedate, rentid from rent where returndate = 'not returned yet' and bookid = '%s' and username = '%s'", bookid, username)
+	rows1, err := lib.db.Queryx(query1)
+	if err != nil {
+		return err
+	}
+	var duedate string
+	var rentid int
+	for rows1.Next() {
+		var i int
+		err = rows1.Scan(&i, &duedate, &rentid)
+		if err != nil {
+			return err
+		}
+		if i != 1 {
+			return fail
+		}
+	}
+	newduedate, err := time.Parse(dateformat, duedate)
+	if err != nil {
+		return err
+	}
+	newduedate1 := time.Unix(newduedate.Unix(), int64(du*time.Hour*24)).Format(dateformat)
+	exec1 := fmt.Sprintf("update rent set returndate = '%s' where rentid = %d", newduedate1, rentid)
+	_, err = lib.db.Exec(exec1)
+	return err
 }
