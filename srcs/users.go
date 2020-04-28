@@ -11,6 +11,10 @@ type User struct {
 	password string
 }
 
+var (
+	loginerror = fmt.Errorf("No such user, or wrong password!")
+)
+
 func resetusers(lib *Library) error {
 	_, err := lib.db.Exec(`
 drop table if exists users;
@@ -68,7 +72,7 @@ func createuser(user *User, lib *Library, admin bool) error {
 	return nil
 }
 func login(user *User, lib *Library) error {
-	wrong := fmt.Errorf("No such user, or wrong password!")
+
 	username1, password1 := user.username, user.password
 	password1 = getSHA256(password1)
 	query := fmt.Sprintf("select count(*) from users where username = '%s'", username1)
@@ -80,7 +84,7 @@ func login(user *User, lib *Library) error {
 		j := 0
 		rows.Scan(&j)
 		if j == 0 {
-			return wrong
+			return loginerror
 		}
 	}
 	query2 := fmt.Sprintf("select password from users where username = '%s'", username1)
@@ -93,7 +97,7 @@ func login(user *User, lib *Library) error {
 		err = rows2.Scan(&password2)
 	}
 	if password1 != password2 {
-		return wrong
+		return loginerror
 	}
 	return nil
 }

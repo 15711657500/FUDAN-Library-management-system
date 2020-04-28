@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strings"
 
 	// mysql connector
 	_ "github.com/go-sql-driver/mysql"
@@ -12,6 +15,12 @@ const (
 	USER     = "root"
 	Password = "xxx"
 	DBName   = "ass3"
+)
+
+var (
+	done     = false
+	visiter  = true
+	username = "visiter"
 )
 
 type Library struct {
@@ -78,8 +87,8 @@ func (lib *Library) Login(username string, password string) error {
 	err := login(&user1, lib)
 	return err
 }
-func (lib *Library) Rent(book *Book, user *User) error {
-	err := rent(book, user, lib)
+func (lib *Library) Rent(bookid string, username string) error {
+	err := rentsinglebook(bookid, username, lib)
 	return err
 }
 func (lib *Library) Query(input string, mode string) error {
@@ -109,4 +118,21 @@ func (lib *Library) Query(input string, mode string) error {
 }
 func main() {
 	fmt.Println("Welcome to the Library Management System!")
+	lib := Library{}
+	lib.ConnectDB()
+	for {
+		output := fmt.Sprintf("%s@FUDAN<", username)
+		print(output)
+		input, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+		input = strings.TrimSpace(input)
+		if input != "" {
+			handleinput(input, &lib)
+		}
+		if done {
+			break
+		}
+	}
 }
