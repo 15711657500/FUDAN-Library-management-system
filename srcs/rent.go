@@ -139,18 +139,24 @@ func querybookbytitle(title string, lib *Library) ([]Book, error) {
 }
 func querysinglebookbyISBN(ISBN string, lib *Library) ([]SingleBook, error) {
 	var books []SingleBook
-	query := fmt.Sprintf("select ISBN, bookid from singlebook where ISBN = '%s'", ISBN)
+	query := fmt.Sprintf("select bookid, title, singlebook.ISBN, available from singlebook, booklist where singlebook.ISBN = '%s' and singlebook.ISBN = booklist.ISBN", ISBN)
 	rows, err := lib.db.Queryx(query)
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
-		var a, b string
-		err = rows.Scan(&a, &b)
+		var a, b, c string
+		var d int
+		err = rows.Scan(&a, &b, &c, &d)
 		if err != nil {
 			return nil, err
 		}
-		books = append(books, SingleBook{a, b})
+		books = append(books, SingleBook{
+			bookid:    a,
+			title:     b,
+			ISBN:      c,
+			available: d,
+		})
 	}
 	return books, nil
 }

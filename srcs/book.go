@@ -1,6 +1,9 @@
 package main
 
 import "fmt"
+import (
+	table "github.com/modood/table"
+)
 
 type Book struct {
 	title  string
@@ -8,8 +11,10 @@ type Book struct {
 	ISBN   string
 }
 type SingleBook struct {
-	ISBN   string
-	bookid string
+	bookid    string
+	title     string
+	ISBN      string
+	available int
 }
 
 func resetbook(lib *Library) error {
@@ -85,4 +90,20 @@ func removesinglebook(bookid string, detail string, lib *Library) error {
 	exec := fmt.Sprintf("insert into removelist(bookid, detail) values ('%s','%s')", bookid, detail)
 	_, err = lib.db.Exec(exec)
 	return err
+}
+func outputbook(books *[]Book) {
+	if len(*books) > 0 {
+		table.OutputA(*books)
+	} else {
+		println("Book not found!")
+	}
+	return
+}
+func outputsinglebook(books *[]SingleBook) {
+	if len(*books) > 0 {
+		table.OutputA(*books)
+	} else {
+		println("Book not found!")
+	}
+	return
 }

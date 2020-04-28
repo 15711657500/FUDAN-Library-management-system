@@ -72,7 +72,7 @@ func (lib *Library) AddBook(title string, auther string, ISBN string) error {
 	return err
 }
 func (lib *Library) AddSingleBook(ISBN string, bookid string) error {
-	book1 := SingleBook{ISBN, bookid}
+	book1 := SingleBook{bookid, "", ISBN, 1}
 	err := addsinglebook(&book1, lib)
 	return err
 }
