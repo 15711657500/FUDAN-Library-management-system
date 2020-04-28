@@ -13,6 +13,8 @@ import (
 const (
 	help = `Type "help" can get this help.
 quit-quit
+login-login
+logout-logout
 `
 )
 
@@ -52,6 +54,17 @@ func handleinput(input string, lib *Library) {
 			username = user1
 			println("")
 			fmt.Printf("Welcome %s!\n", username)
+		} else {
+			print(help)
+		}
+	case "logout":
+		if len(args) == 1 {
+			if visiter {
+				println("Please login first!")
+			} else {
+				visiter = true
+				username = "visitor"
+			}
 		} else {
 			print(help)
 		}
