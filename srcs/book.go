@@ -1,20 +1,20 @@
 package main
 
-import "fmt"
 import (
-	table "github.com/modood/table"
+	"fmt"
+	"github.com/modood/table"
 )
 
 type Book struct {
-	title  string
-	author string
+	Title  string
+	Author string
 	ISBN   string
 }
 type SingleBook struct {
-	bookid    string
-	title     string
+	Bookid    string
+	Title     string
 	ISBN      string
-	available int
+	Available int
 }
 
 func resetbook(lib *Library) error {
@@ -62,12 +62,12 @@ func createbook(lib *Library) error {
 	return err
 }
 func addbook(book *Book, lib *Library) error {
-	exec := fmt.Sprintf("insert ignore into booklist(title, author, ISBN) values ('%s','%s','%s')", book.title, book.author, book.ISBN)
+	exec := fmt.Sprintf("insert ignore into booklist(title, author, ISBN) values ('%s','%s','%s')", book.Title, book.Author, book.ISBN)
 	_, err := lib.db.Exec(exec)
 	return err
 }
 func addsinglebook(book *SingleBook, lib *Library) error {
-	exec := fmt.Sprintf("insert ignore into singlebook(ISBN, bookid) values ('%s','%s')", book.ISBN, book.bookid)
+	exec := fmt.Sprintf("insert ignore into singlebook(ISBN, bookid) values ('%s','%s')", book.ISBN, book.Bookid)
 	_, err := lib.db.Exec(exec)
 	return err
 }
@@ -90,20 +90,4 @@ func removesinglebook(bookid string, detail string, lib *Library) error {
 	exec := fmt.Sprintf("insert into removelist(bookid, detail) values ('%s','%s')", bookid, detail)
 	_, err = lib.db.Exec(exec)
 	return err
-}
-func outputbook(books *[]Book) {
-	if len(*books) > 0 {
-		table.OutputA(*books)
-	} else {
-		println("Book not found!")
-	}
-	return
-}
-func outputsinglebook(books *[]SingleBook) {
-	if len(*books) > 0 {
-		table.OutputA(*books)
-	} else {
-		println("Book not found!")
-	}
-	return
 }

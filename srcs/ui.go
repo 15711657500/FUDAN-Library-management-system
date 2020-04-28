@@ -4,6 +4,7 @@ import "C"
 import (
 	"bufio"
 	"fmt"
+	"github.com/modood/table"
 	"os"
 	"strings"
 	//"golang.org/x/crypto/ssh"
@@ -136,7 +137,10 @@ func handleinput(input string, lib *Library) {
 				err := rentsinglebook(args[1], username, lib)
 				if err != nil {
 					println(err.Error())
+				} else {
+					println("Successfully borrowed!")
 				}
+
 			}
 
 		} else {
@@ -145,6 +149,22 @@ func handleinput(input string, lib *Library) {
 
 	default:
 		print(help)
+	}
+	return
+}
+func outputbook(books *[]Book) {
+	if len(*books) > 0 {
+		table.OutputA(*books)
+	} else {
+		println("Book not found!")
+	}
+	return
+}
+func outputsinglebook(books *[]SingleBook) {
+	if len(*books) > 0 {
+		table.OutputA(*books)
+	} else {
+		println("Book not found!")
 	}
 	return
 }

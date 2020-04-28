@@ -112,7 +112,7 @@ func (lib *Library) Query(input string, mode string) error {
 		return nil
 	}
 	for _, value := range books {
-		println(value.title, "\t", value.author, "\t", value.ISBN)
+		println(value.Title, "\t", value.Author, "\t", value.ISBN)
 	}
 	return nil
 }
@@ -135,4 +135,5 @@ func main() {
 			break
 		}
 	}
+
 }

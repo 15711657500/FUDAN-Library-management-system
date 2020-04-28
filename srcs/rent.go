@@ -65,15 +65,16 @@ func rentsinglebook(bookid string, username string, lib *Library) error {
 	if err != nil {
 		return err
 	}
+	var i int
 	for rows.Next() {
-		var i int
 		err = rows.Scan(&i)
 		if err != nil {
 			return err
 		}
-		if i != 1 {
-			return restricted
-		}
+
+	}
+	if i != 1 {
+		return restricted
 	}
 	rentdate := time.Now().Format(dateformat)
 	duedate := time.Unix(time.Now().Unix(), int64(du*time.Hour*24)).Format(dateformat)
@@ -82,7 +83,7 @@ func rentsinglebook(bookid string, username string, lib *Library) error {
 	if err != nil {
 		return err
 	}
-	exec2 := fmt.Sprintf("updata singlebook set available = 0 where bookid = '%s'", bookid)
+	exec2 := fmt.Sprintf("update singlebook set available = 0 where bookid = '%s'", bookid)
 	_, err = lib.db.Exec(exec2)
 	return err
 }
@@ -101,6 +102,7 @@ func querybookbyISBN(ISBN string, lib *Library) ([]Book, error) {
 		}
 		books = append(books, Book{a, b, c})
 	}
+
 	return books, nil
 }
 func querybookbyauthor(author string, lib *Library) ([]Book, error) {
@@ -152,10 +154,10 @@ func querysinglebookbyISBN(ISBN string, lib *Library) ([]SingleBook, error) {
 			return nil, err
 		}
 		books = append(books, SingleBook{
-			bookid:    a,
-			title:     b,
+			Bookid:    a,
+			Title:     b,
 			ISBN:      c,
-			available: d,
+			Available: d,
 		})
 	}
 	return books, nil
@@ -198,21 +200,20 @@ func checkrent(username string, lib *Library) (bool, error) {
 }
 func returnsinglebook(bookid string, username string, lib *Library) error {
 	notfound := fmt.Errorf("unable to return!")
-	query := fmt.Sprintf("select count(*), rentid from rent where bookid = '%s' and username = '%s' and returndate = 'not returned yet'", bookid, username)
+	query := fmt.Sprintf("select count(*), rentid from rent where bookid = '%s' and username = '%s' and returndate = 'not returned yet' group by rentid", bookid, username)
 	rows, err := lib.db.Queryx(query)
-	var rentid int
+	var rentid, i int
 	if err != nil {
 		return err
 	}
 	for rows.Next() {
-		var i int
 		err = rows.Scan(&i, &rentid)
 		if err != nil {
 			return err
 		}
-		if i != 1 {
-			return notfound
-		}
+	}
+	if i != 1 {
+		return notfound
 	}
 	returndate := time.Now().Format(dateformat)
 	exec1 := fmt.Sprintf("update rent set returndate = '%s' where rentid = %d", returndate, rentid)
@@ -242,7 +243,7 @@ func queryrentrecord(username string, lib *Library) ([]Rent, error) {
 		if err != nil {
 			return nil, err
 		}
-		rent = append(rent, Rent{rentdate, duedate, returndate, fine, bookid, ISBN, title, author})
+		rent = append(rent, Rent{rentdate: rentdate, duedate: duedate, returndate: returndate, fine: fine, bookid: bookid, ISBN: ISBN, title: title, author: author})
 
 	}
 	return rent, nil
@@ -255,15 +256,16 @@ func queryduedate(bookid string, lib *Library) (string, error) {
 		return "", err
 	}
 	var duedate string
+	var i int
 	for rows1.Next() {
-		var i int
 		err = rows1.Scan(&i, &duedate)
 		if err != nil {
 			return "", err
 		}
-		if i != 1 {
-			return "", notfound
-		}
+
+	}
+	if i != 1 {
+		return "", notfound
 	}
 	return duedate, nil
 }
@@ -275,16 +277,16 @@ func extend(bookid string, username string, lib *Library) error {
 		return err
 	}
 	var duedate string
-	var rentid int
+	var rentid, i int
 	for rows1.Next() {
-		var i int
 		err = rows1.Scan(&i, &duedate, &rentid)
 		if err != nil {
 			return err
 		}
-		if i != 1 {
-			return fail
-		}
+
+	}
+	if i != 1 {
+		return fail
 	}
 	newduedate, err := time.Parse(dateformat, duedate)
 	if err != nil {
