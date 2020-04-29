@@ -9,6 +9,7 @@ import (
 type User struct {
 	username string
 	password string
+	root     int
 }
 
 var (
@@ -27,9 +28,16 @@ func createusers(lib *Library) error {
 (
     username nvarchar(200) primary key,
     password nvarchar(200),
-    permission nvarchar(200) default "default"
+    root bool default 0
 );
 `)
+	if err != nil {
+		return err
+	}
+	_, err = lib.db.Exec(fmt.Sprintf(`
+	insert ignore into users(username, password, root) 
+	values ("root", "%s", 1)
+`, getSHA256("root")))
 	return err
 }
 func getSHA256(input string) string {
@@ -39,7 +47,7 @@ func getSHA256(input string) string {
 	hashCode := hex.EncodeToString(bytes)
 	return hashCode
 }
-func createuser(user *User, lib *Library, admin bool) error {
+func createuser(user *User, lib *Library) error {
 	username1, password1 := user.username, user.password
 	query := fmt.Sprintf("select count(*) from users where username = '%s'", username1)
 	rows, err := lib.db.Queryx(query)
@@ -59,8 +67,8 @@ func createuser(user *User, lib *Library, admin bool) error {
 	}
 	password1 = getSHA256(password1)
 	var exec string
-	if admin {
-		exec = fmt.Sprintf("insert ignore into users(username, password, permission) values ('%s', '%s', 'admin')", username1, password1)
+	if user.root != 0 {
+		exec = fmt.Sprintf("insert ignore into users(username, password, admin) values ('%s', '%s', 1)", username1, password1)
 	} else {
 		exec = fmt.Sprintf("insert ignore into users(username, password) values ('%s', '%s')", username1, password1)
 	}
@@ -87,17 +95,34 @@ func login(user *User, lib *Library) error {
 			return loginerror
 		}
 	}
-	query2 := fmt.Sprintf("select password from users where username = '%s'", username1)
+	query2 := fmt.Sprintf("select password, root from users where username = '%s'", username1)
 	rows2, err := lib.db.Queryx(query2)
 	if err != nil {
 		return err
 	}
 	var password2 string
+	var r int
 	for rows2.Next() {
-		err = rows2.Scan(&password2)
+		err = rows2.Scan(&password2, &r)
 	}
 	if password1 != password2 {
 		return loginerror
 	}
+	root = r
 	return nil
+}
+func createuser_batch(user *[]User, lib *Library) error {
+	exec := "insert ignore into users(username, password, root) values "
+	if len(*user) < 1 {
+		return nil
+	}
+	for index, value := range *user {
+		u, p, r := value.username, getSHA256(value.password), value.root
+		exec = exec + fmt.Sprintf("('%s','%s',%d)", u, p, r)
+		if index < len(*user)-1 {
+			exec = exec + ","
+		}
+	}
+	_, err := lib.db.Exec(exec)
+	return err
 }

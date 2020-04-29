@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/modood/table"
 )
 
 type Book struct {
@@ -89,5 +88,35 @@ func removesinglebook(bookid string, detail string, lib *Library) error {
 	}
 	exec := fmt.Sprintf("insert into removelist(bookid, detail) values ('%s','%s')", bookid, detail)
 	_, err = lib.db.Exec(exec)
+	return err
+}
+func addbook_batch(books *[]Book, lib *Library) error {
+	exec := "insert ignore into booklist(title, author, ISBN) values "
+	if len(*books) < 1 {
+		return nil
+	}
+	for index, value := range *books {
+		t, a, i := value.Title, value.Author, value.ISBN
+		exec = exec + fmt.Sprintf("('%s', '%s', '%s')", t, a, i)
+		if index < len(*books)-1 {
+			exec = exec + ","
+		}
+	}
+	_, err := lib.db.Exec(exec)
+	return err
+}
+func addsinglebook_batch(books *[]SingleBook, lib *Library) error {
+	exec := "insert ignore into singlebook(bookid, ISBN) values "
+	if len(*books) < 1 {
+		return nil
+	}
+	for index, value := range *books {
+		b, i := value.Bookid, value.ISBN
+		exec = exec + fmt.Sprintf("('%s','%s')", b, i)
+		if index < len(*books)-1 {
+			exec = exec + ","
+		}
+	}
+	_, err := lib.db.Exec(exec)
 	return err
 }

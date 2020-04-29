@@ -21,6 +21,7 @@ var (
 	done     = false
 	visiter  = true
 	username = "visiter"
+	root     = 0
 )
 
 type Library struct {
@@ -38,18 +39,18 @@ func (lib *Library) ConnectDB() {
 // CreateTables created the tables in MySQL
 func (lib *Library) CreateTables() error {
 	err := fmt.Errorf("0")
-	err = resetrent(lib)
-	if err != nil {
-		return err
-	}
-	err = resetusers(lib)
-	if err != nil {
-		return err
-	}
-	err = resetbook(lib)
-	if err != nil {
-		return err
-	}
+	//err = resetrent(lib)
+	//if err != nil {
+	//	return err
+	//}
+	//err = resetusers(lib)
+	//if err != nil {
+	//	return err
+	//}
+	//err = resetbook(lib)
+	//if err != nil {
+	//	return err
+	//}
 	err = createbook(lib)
 	if err != nil {
 		return err
@@ -76,14 +77,14 @@ func (lib *Library) AddSingleBook(ISBN string, bookid string) error {
 	err := addsinglebook(&book1, lib)
 	return err
 }
-func (lib *Library) CreateUser(username string, password string, admin bool) error {
-	user1 := User{username, password}
-	err := createuser(&user1, lib, admin)
+func (lib *Library) CreateUser(username string, password string) error {
+	user1 := User{username, password, 0}
+	err := createuser(&user1, lib)
 	return err
 }
 
 func (lib *Library) Login(username string, password string) error {
-	user1 := User{username, password}
+	user1 := User{username, password, 0}
 	err := login(&user1, lib)
 	return err
 }
@@ -120,6 +121,10 @@ func main() {
 	fmt.Println("Welcome to the Library Management System!")
 	lib := Library{}
 	lib.ConnectDB()
+	err := lib.CreateTables()
+	if err != nil {
+		panic(err)
+	}
 	for {
 		output := fmt.Sprintf("%s@FUDAN<", username)
 		print(output)
@@ -135,5 +140,4 @@ func main() {
 			break
 		}
 	}
-
 }
