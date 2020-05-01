@@ -27,12 +27,20 @@ const (
 	dateformat = "2006-01-02 15:04:05"
 )
 
+// errors
+var (
+	returnnotfound = fmt.Errorf("Unable to return!")
+)
+
+// drop table rent
 func resetrent(lib *Library) error {
 	_, err := lib.db.Exec(`
 	drop table if exists rent;
 `)
 	return err
 }
+
+// create table rent
 func createrent(lib *Library) error {
 	_, err := lib.db.Exec(`
 	create table if not exists rent
@@ -51,6 +59,8 @@ func createrent(lib *Library) error {
 `)
 	return err
 }
+
+// borrow a book
 func rentsinglebook(bookid string, username string, lib *Library) error {
 	restricted := fmt.Errorf("Not able to borrow!")
 	// check the user
@@ -94,6 +104,8 @@ func rentsinglebook(bookid string, username string, lib *Library) error {
 	_, err = lib.db.Exec(exec3)
 	return err
 }
+
+// query the booklist by ISBN
 func querybookbyISBN(ISBN string, lib *Library) ([]Book, error) {
 	var books []Book
 	query := fmt.Sprintf("select title, author, ISBN from booklist where ISBN = '%s'", ISBN)
@@ -112,6 +124,8 @@ func querybookbyISBN(ISBN string, lib *Library) ([]Book, error) {
 
 	return books, nil
 }
+
+// query the booklist by author
 func querybookbyauthor(author string, lib *Library) ([]Book, error) {
 	var books []Book
 	query := fmt.Sprintf("select title, author, ISBN from booklist where author = '%s'", author)
@@ -129,6 +143,8 @@ func querybookbyauthor(author string, lib *Library) ([]Book, error) {
 	}
 	return books, nil
 }
+
+// query the booklist by title
 func querybookbytitle(title string, lib *Library) ([]Book, error) {
 	var books []Book
 	query := fmt.Sprintf("select title, author, ISBN from booklist where title like '%%%s%%'", title)
@@ -146,6 +162,8 @@ func querybookbytitle(title string, lib *Library) ([]Book, error) {
 	}
 	return books, nil
 }
+
+// query table singlebook by ISBN
 func querysinglebookbyISBN(ISBN string, lib *Library) ([]SingleBook, error) {
 	var books []SingleBook
 	query := fmt.Sprintf("select bookid, title, singlebook.ISBN, available from singlebook, booklist where singlebook.ISBN = '%s' and singlebook.ISBN = booklist.ISBN", ISBN)
@@ -169,6 +187,8 @@ func querysinglebookbyISBN(ISBN string, lib *Library) ([]SingleBook, error) {
 	}
 	return books, nil
 }
+
+// check whether the user has exceeded the borrow limit or overdue limit
 func checkrent(username string, lib *Library) (bool, error) {
 	// exceed rent limit
 	query1 := fmt.Sprintf("select count(*) from rent where username = '%s' and returndate = 'not returned yet'", username)
@@ -205,8 +225,9 @@ func checkrent(username string, lib *Library) (bool, error) {
 	}
 	return true, nil
 }
+
+// return a book
 func returnsinglebook(bookid string, username string, lib *Library) error {
-	notfound := fmt.Errorf("unable to return!")
 	query := fmt.Sprintf("select count(*), rentid from rent where bookid = '%s' and username = '%s' and returndate = 'not returned yet' group by rentid", bookid, username)
 	rows, err := lib.db.Queryx(query)
 	var rentid, i int
@@ -220,7 +241,7 @@ func returnsinglebook(bookid string, username string, lib *Library) error {
 		}
 	}
 	if i != 1 {
-		return notfound
+		return returnnotfound
 	}
 	returndate := time.Now().Format(dateformat)
 	exec1 := fmt.Sprintf("update rent set returndate = '%s' where rentid = %d", returndate, rentid)
@@ -232,6 +253,8 @@ func returnsinglebook(bookid string, username string, lib *Library) error {
 	_, err = lib.db.Exec(exec2)
 	return err
 }
+
+// query the borrow record of a user
 func queryrentrecord(username string, lib *Library) ([]Rent, error) {
 	var rentdate, duedate, returndate, bookid, ISBN, title, author string
 	var fine float32
@@ -255,6 +278,8 @@ func queryrentrecord(username string, lib *Library) ([]Rent, error) {
 	}
 	return rent, nil
 }
+
+// query the duedate of a book
 func queryduedate(bookid string, lib *Library) (string, error) {
 	notfound := fmt.Errorf("You have not borrowed this book!")
 	query1 := fmt.Sprintf("select count(*), duedate from rent where returndate = 'not returned yet' and bookid = '%s'", bookid)
@@ -276,6 +301,8 @@ func queryduedate(bookid string, lib *Library) (string, error) {
 	}
 	return duedate, nil
 }
+
+// extend a book
 func extend(bookid string, username string, lib *Library) error {
 	fail := fmt.Errorf("Unable to extend!")
 	query1 := fmt.Sprintf("select duedate, rentid from rent where returndate = 'not returned yet' and bookid = '%s' and username = '%s'", bookid, username)

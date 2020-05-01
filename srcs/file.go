@@ -7,6 +7,7 @@ import (
 	"strconv"
 )
 
+// read users from csv file
 func readuser(filename string) ([]User, error) {
 	fs, err := os.Open(filename)
 	if err != nil {
@@ -32,6 +33,8 @@ func readuser(filename string) ([]User, error) {
 	}
 	return users, nil
 }
+
+// read books from csv file
 func readbook(filename string) ([]Book, error) {
 	fs, err := os.Open(filename)
 	if err != nil {
@@ -53,6 +56,8 @@ func readbook(filename string) ([]Book, error) {
 	}
 	return books, nil
 }
+
+// read singlebooks from csv file
 func readsinglebook(filename string) ([]SingleBook, error) {
 	fs, err := os.Open(filename)
 	if err != nil {

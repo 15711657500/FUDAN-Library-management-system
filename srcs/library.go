@@ -28,12 +28,13 @@ type Library struct {
 	db *sqlx.DB
 }
 
-func (lib *Library) ConnectDB() {
+func (lib *Library) ConnectDB() error {
 	db, err := sqlx.Open("mysql", fmt.Sprintf("%s:%s@tcp(127.0.0.1:3306)/%s", USER, Password, DBName))
 	if err != nil {
-		panic(err)
+		return err
 	}
 	lib.db = db
+	return nil
 }
 
 // CreateTables created the tables in MySQL
@@ -66,71 +67,29 @@ func (lib *Library) CreateTables() error {
 	return nil
 }
 
-// AddBook add a book into the library
-func (lib *Library) AddBook(title string, auther string, ISBN string) error {
-	book1 := Book{title, auther, ISBN}
-	err := addbook(&book1, lib)
-	return err
-}
-func (lib *Library) AddSingleBook(ISBN string, bookid string) error {
-	book1 := SingleBook{bookid, "", ISBN, 1}
-	err := addsinglebook(&book1, lib)
-	return err
-}
-func (lib *Library) CreateUser(username string, password string) error {
-	user1 := User{username, password, 0}
-	err := createuser(&user1, lib)
-	return err
-}
-
-func (lib *Library) Login(username string, password string) error {
-	user1 := User{username, password, 0}
-	err := login(&user1, lib)
-	return err
-}
-func (lib *Library) Rent(bookid string, username string) error {
-	err := rentsinglebook(bookid, username, lib)
-	return err
-}
-func (lib *Library) Query(input string, mode string) error {
-	var books []Book
-	err := fmt.Errorf("0")
-	switch mode {
-	case "ISBN":
-		books, err = querybookbyISBN(input, lib)
-	case "author":
-		books, err = querybookbyauthor(input, lib)
-	case "title":
-		books, err = querybookbytitle(input, lib)
-	default:
-		err = fmt.Errorf("Wrong Mode!")
-	}
-	if err != nil {
-		return err
-	}
-	if books == nil {
-		println("Not found!")
-		return nil
-	}
-	for _, value := range books {
-		println(value.Title, "\t", value.Author, "\t", value.ISBN)
-	}
-	return nil
-}
 func main() {
-	fmt.Println("Welcome to the Library Management System!")
 	lib := Library{}
-	lib.ConnectDB()
-	err := lib.CreateTables()
+	err := lib.ConnectDB()
 	if err != nil {
-		panic(err)
+		fmt.Println(err.Error())
+		fmt.Println("Unable to open. Please try again.")
+		return
 	}
+	err = lib.CreateTables()
+	if err != nil {
+		fmt.Println(err.Error())
+		fmt.Println("Unable to open. Please try again.")
+		return
+	}
+	fmt.Println("Welcome to the Library Management System!")
 	for {
 		output := fmt.Sprintf("%s@FUDAN<", username)
 		print(output)
 		input, err := bufio.NewReader(os.Stdin).ReadString('\n')
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Println(err.Error())
+			fmt.Println("Unexpected error! Force to quit!")
+			return
 		}
 		input = strings.TrimSpace(input)
 		if input != "" {

@@ -12,11 +12,6 @@ import (
 	terminal "golang.org/x/crypto/ssh/terminal"
 )
 
-var (
-	books       []Book
-	singlebooks []SingleBook
-)
-
 type MyHelp struct {
 	Command     string
 	Description string
@@ -61,8 +56,13 @@ var (
 		{"add users [filepath]", "add user from csv file, default filepath'../data/users.csv'", "add users"},
 		{"add book <title> <author> <ISBN>", "add book to booklist", "add book a b c"},
 		{"add books [filepath]", "add book to booklist from csv file, default filepath'../data/books.csv'", "add books"},
-		{"add sbook <bookid> <ISBN>", "", ""},
+		{"add sbook <bookid> <ISBN>", "add singlebook", "add a b"},
+		{"add sbooks [filepath]", "add singlebook from csv file, default filepath'../data/sbooks.csv'", "add sbooks"},
 	}
+)
+
+const (
+	unexpectederror = "Unexpected error!"
 )
 
 func handleinput(input string, lib *Library) {
@@ -95,10 +95,11 @@ func handleinput(input string, lib *Library) {
 				fmt.Println(loginerror.Error())
 				return
 			} else if err != nil {
-				panic(err)
+				fmt.Println(err.Error())
+				fmt.Println(unexpectederror)
+				return
 			}
-			visiter = false
-			username = user1
+
 			fmt.Println("")
 			fmt.Printf("Welcome %s!\n", username)
 		} else {
@@ -112,6 +113,7 @@ func handleinput(input string, lib *Library) {
 				visiter = true
 				username = "visitor"
 				root = 0
+				fmt.Println("Successfully logout!")
 			}
 		} else {
 			Help()
@@ -121,6 +123,8 @@ func handleinput(input string, lib *Library) {
 			books, err := querybookbyISBN(args[1], lib)
 			if err != nil {
 				fmt.Println(err.Error())
+				fmt.Println(unexpectederror)
+				return
 			}
 			outputbook(&books)
 		} else {
@@ -131,6 +135,8 @@ func handleinput(input string, lib *Library) {
 			books, err := querybookbytitle(args[1], lib)
 			if err != nil {
 				fmt.Println(err.Error())
+				fmt.Println(unexpectederror)
+				return
 			}
 			outputbook(&books)
 		} else {
@@ -141,6 +147,8 @@ func handleinput(input string, lib *Library) {
 			books, err := querybookbyauthor(args[1], lib)
 			if err != nil {
 				fmt.Println(err.Error())
+				fmt.Println(unexpectederror)
+				return
 			}
 			outputbook(&books)
 		} else {
@@ -149,8 +157,13 @@ func handleinput(input string, lib *Library) {
 	case "return":
 		if len(args) == 2 {
 			err := returnsinglebook(args[1], username, lib)
-			if err != nil {
+			if err != nil && err.Error() == returnnotfound.Error() {
+				fmt.Println(returnnotfound.Error())
+			} else if err != nil {
 				fmt.Println(err.Error())
+				fmt.Println(unexpectederror)
+			} else {
+				fmt.Println("Successfully returned!")
 			}
 		} else {
 			Help()
@@ -160,6 +173,8 @@ func handleinput(input string, lib *Library) {
 			books, err := querysinglebookbyISBN(args[1], lib)
 			if err != nil {
 				fmt.Println(err.Error())
+				fmt.Println(unexpectederror)
+				return
 			}
 			outputsinglebook(&books)
 		} else {
@@ -176,9 +191,7 @@ func handleinput(input string, lib *Library) {
 				} else {
 					fmt.Println("Successfully borrowed!")
 				}
-
 			}
-
 		} else {
 			Help()
 		}
@@ -198,7 +211,7 @@ func handleinput(input string, lib *Library) {
 							Help()
 							return
 						}
-						createuser(&User{u, p, r}, lib)
+						adduser(&User{u, p, r}, lib)
 					}
 				case "users":
 					if len(args) > 3 {
@@ -216,7 +229,7 @@ func handleinput(input string, lib *Library) {
 							panic(err)
 							return
 						}
-						err = createuser_batch(&users, lib)
+						err = adduser_batch(&users, lib)
 						if err != nil {
 							panic(err)
 						}

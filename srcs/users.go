@@ -12,16 +12,20 @@ type User struct {
 	root     int
 }
 
+// errors
 var (
 	loginerror = fmt.Errorf("No such user, or wrong password!")
 )
 
+// drop table users
 func resetusers(lib *Library) error {
 	_, err := lib.db.Exec(`
 drop table if exists users;
 `)
 	return err
 }
+
+// create table users, and add default root account
 func createusers(lib *Library) error {
 	_, err := lib.db.Exec(`
 	create table if not exists users
@@ -40,6 +44,8 @@ func createusers(lib *Library) error {
 `, getSHA256("root")))
 	return err
 }
+
+// get SHA256 code for passwords
 func getSHA256(input string) string {
 	hash := sha256.New()
 	hash.Write([]byte(input))
@@ -47,7 +53,9 @@ func getSHA256(input string) string {
 	hashCode := hex.EncodeToString(bytes)
 	return hashCode
 }
-func createuser(user *User, lib *Library) error {
+
+// add an account to table users
+func adduser(user *User, lib *Library) error {
 	username1, password1 := user.username, user.password
 	query := fmt.Sprintf("select count(*) from users where username = '%s'", username1)
 	rows, err := lib.db.Queryx(query)
@@ -79,6 +87,8 @@ func createuser(user *User, lib *Library) error {
 
 	return nil
 }
+
+// login
 func login(user *User, lib *Library) error {
 
 	username1, password1 := user.username, user.password
@@ -90,7 +100,10 @@ func login(user *User, lib *Library) error {
 	}
 	for rows.Next() {
 		j := 0
-		rows.Scan(&j)
+		err = rows.Scan(&j)
+		if err != nil {
+			return err
+		}
 		if j == 0 {
 			return loginerror
 		}
@@ -104,14 +117,21 @@ func login(user *User, lib *Library) error {
 	var r int
 	for rows2.Next() {
 		err = rows2.Scan(&password2, &r)
+		if err != nil {
+			return err
+		}
 	}
 	if password1 != password2 {
 		return loginerror
 	}
 	root = r
+	visiter = false
+	username = username1
 	return nil
 }
-func createuser_batch(user *[]User, lib *Library) error {
+
+// add accounts to table users, using batch insert
+func adduser_batch(user *[]User, lib *Library) error {
 	exec := "insert ignore into users(username, password, root) values "
 	if len(*user) < 1 {
 		return nil
@@ -126,6 +146,8 @@ func createuser_batch(user *[]User, lib *Library) error {
 	_, err := lib.db.Exec(exec)
 	return err
 }
+
+// change password of one's own account
 func changepassword(username string, password string, lib *Library) error {
 	exec1 := fmt.Sprintf("update users set password = '%s' where username = '%s'", getSHA256(password), username)
 	_, err := lib.db.Exec(exec1)

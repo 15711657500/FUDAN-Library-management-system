@@ -16,6 +16,7 @@ type SingleBook struct {
 	Available int
 }
 
+// drop table booklist and singlebook
 func resetbook(lib *Library) error {
 
 	_, err := lib.db.Exec(`drop table if exists singlebook`)
@@ -25,6 +26,8 @@ func resetbook(lib *Library) error {
 	_, err = lib.db.Exec(`drop table if exists booklist`)
 	return err
 }
+
+// create table booklist and singlebook
 func createbook(lib *Library) error {
 	_, err := lib.db.Exec(`
 	create table if not exists booklist
@@ -60,16 +63,22 @@ func createbook(lib *Library) error {
 `)
 	return err
 }
+
+// add a book to booklist
 func addbook(book *Book, lib *Library) error {
 	exec := fmt.Sprintf("insert ignore into booklist(title, author, ISBN) values ('%s','%s','%s')", book.Title, book.Author, book.ISBN)
 	_, err := lib.db.Exec(exec)
 	return err
 }
+
+// add a singlebook to singlebook
 func addsinglebook(book *SingleBook, lib *Library) error {
 	exec := fmt.Sprintf("insert ignore into singlebook(ISBN, bookid) values ('%s','%s')", book.ISBN, book.Bookid)
 	_, err := lib.db.Exec(exec)
 	return err
 }
+
+// add a singlebook to removelist and set available = 0 in table singlebook
 func removesinglebook(bookid string, detail string, lib *Library) error {
 	query := fmt.Sprintf("select count(*) from singlebook where bookid = '%s' and available = 1", bookid)
 	rows, err := lib.db.Queryx(query)
@@ -90,6 +99,8 @@ func removesinglebook(bookid string, detail string, lib *Library) error {
 	_, err = lib.db.Exec(exec)
 	return err
 }
+
+// add books to booklist, using batch insert
 func addbook_batch(books *[]Book, lib *Library) error {
 	exec := "insert ignore into booklist(title, author, ISBN) values "
 	if len(*books) < 1 {
@@ -105,6 +116,8 @@ func addbook_batch(books *[]Book, lib *Library) error {
 	_, err := lib.db.Exec(exec)
 	return err
 }
+
+// add singlebooks to singlebook, using batch insert
 func addsinglebook_batch(books *[]SingleBook, lib *Library) error {
 	exec := "insert ignore into singlebook(bookid, ISBN) values "
 	if len(*books) < 1 {
