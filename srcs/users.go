@@ -125,7 +125,7 @@ func login(user *User, lib *Library) error {
 		return loginerror
 	}
 	root = r
-	visiter = false
+	visitor = false
 	username = username1
 	return nil
 }
@@ -152,4 +152,26 @@ func changepassword(username string, password string, lib *Library) error {
 	exec1 := fmt.Sprintf("update users set password = '%s' where username = '%s'", getSHA256(password), username)
 	_, err := lib.db.Exec(exec1)
 	return err
+}
+
+// check if the password of the user is correct
+func checkpassword(username string, password string, lib *Library) (bool, error) {
+	query := fmt.Sprintf("select count(*) from users where username = '%s' and password = '%s'", username, getSHA256(password))
+	rows, err := lib.db.Queryx(query)
+	if err != nil {
+		return false, err
+	}
+	for rows.Next() {
+		var i int
+		err = rows.Scan(&i)
+		if err != nil {
+			return false, err
+		}
+		if i == 1 {
+			return true, nil
+		} else {
+			return false, nil
+		}
+	}
+	return false, nil
 }

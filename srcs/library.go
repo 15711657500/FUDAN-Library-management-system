@@ -19,8 +19,8 @@ const (
 
 var (
 	done     = false
-	visiter  = true
-	username = "visiter"
+	visitor  = true
+	username = "visitor"
 	root     = 0
 )
 

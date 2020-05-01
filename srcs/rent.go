@@ -145,9 +145,18 @@ func querybookbyauthor(author string, lib *Library) ([]Book, error) {
 }
 
 // query the booklist by title
-func querybookbytitle(title string, lib *Library) ([]Book, error) {
+func querybookbytitle(title []string, lib *Library) ([]Book, error) {
 	var books []Book
-	query := fmt.Sprintf("select title, author, ISBN from booklist where title like '%%%s%%'", title)
+	// query := fmt.Sprintf("select title, author, ISBN from booklist where title like '%%%s%%'", title)
+	query := "select title, author, ISBN from booklist "
+	for index, value := range title {
+		if index == 0 {
+			query = query + "where "
+		} else {
+			query = query + "and "
+		}
+		query = query + fmt.Sprintf("title like '%%%s%%' ", value)
+	}
 	rows, err := lib.db.Queryx(query)
 	if err != nil {
 		return nil, err

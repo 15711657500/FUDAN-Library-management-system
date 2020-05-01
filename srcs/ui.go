@@ -25,7 +25,7 @@ var (
 		{"login", "login", "login"},
 		{"logout", "logout", "logout"},
 		{"ISBN <ISBN>", "search by ISBN", "ISBN abc"},
-		{"title <title>", "search by title", "title abc"},
+		{"title <title> [title, ...]", "search by title in mutiple keywords", "title math analysis"},
 		{"author <author>", "search by author", "author a"},
 		{"bookid <ISBN>", "get bookid of books whose ISBN is <ISBN>", "bookid abc"},
 	}
@@ -34,7 +34,7 @@ var (
 		{"login", "login", "login"},
 		{"logout", "logout", "logout"},
 		{"ISBN <ISBN>", "search by ISBN", "ISBN abc"},
-		{"title <title>", "search by title", "title abc"},
+		{"title <title> [title, ...]", "search by title in mutiple keywords", "title math analysis"},
 		{"author <author>", "search by author", "author a"},
 		{"bookid <ISBN>", "get bookid of books whose ISBN is <ISBN>", "bookid abc"},
 		{"borrow <bookid>", "borrow the book whose id is <bookid>", "borrow 2"},
@@ -46,7 +46,7 @@ var (
 		{"login", "login", "login"},
 		{"logout", "logout", "logout"},
 		{"ISBN <ISBN>", "search by ISBN", "ISBN abc"},
-		{"title <title>", "search by title", "title abc"},
+		{"title <title> [title, ...]", "search by title in mutiple keywords", "title math analysis"},
 		{"author <author>", "search by author", "author a"},
 		{"bookid <ISBN>", "get bookid of books whose ISBN is <ISBN>", "bookid abc"},
 		{"borrow <bookid>", "borrow the book whose id is <bookid>", "borrow 2"},
@@ -80,7 +80,10 @@ func handleinput(input string, lib *Library) {
 			user1, err := bufio.NewReader(os.Stdin).ReadString('\n')
 
 			if err != nil {
-				panic(err)
+				fmt.Println("")
+				fmt.Println(err.Error())
+				fmt.Println(unexpectederror)
+				return
 			}
 			user1 = strings.TrimSpace(user1)
 			fmt.Print("password:")
@@ -95,6 +98,7 @@ func handleinput(input string, lib *Library) {
 				fmt.Println(loginerror.Error())
 				return
 			} else if err != nil {
+				fmt.Println("")
 				fmt.Println(err.Error())
 				fmt.Println(unexpectederror)
 				return
@@ -107,10 +111,10 @@ func handleinput(input string, lib *Library) {
 		}
 	case "logout":
 		if len(args) == 1 {
-			if visiter {
+			if visitor {
 				fmt.Println("Please login first!")
 			} else {
-				visiter = true
+				visitor = true
 				username = "visitor"
 				root = 0
 				fmt.Println("Successfully logout!")
@@ -131,8 +135,8 @@ func handleinput(input string, lib *Library) {
 			Help()
 		}
 	case "title":
-		if len(args) == 2 {
-			books, err := querybookbytitle(args[1], lib)
+		if len(args) >= 2 {
+			books, err := querybookbytitle(args[1:], lib)
 			if err != nil {
 				fmt.Println(err.Error())
 				fmt.Println(unexpectederror)
@@ -182,7 +186,7 @@ func handleinput(input string, lib *Library) {
 		}
 	case "borrow":
 		if len(args) == 2 {
-			if visiter {
+			if visitor {
 				fmt.Println("Please login first!")
 			} else {
 				err := rentsinglebook(args[1], username, lib)
@@ -315,6 +319,63 @@ func handleinput(input string, lib *Library) {
 				fmt.Println("Successfully extend!")
 			}
 		}
+	case "changepassword":
+		if visitor {
+			Help()
+		} else {
+			fmt.Println("Current password:")
+			curp, err := terminal.ReadPassword(0)
+			if err != nil {
+				fmt.Println("")
+				fmt.Println(err.Error())
+				fmt.Println(unexpectederror)
+				return
+			}
+			curp1 := strings.TrimSpace(string(curp))
+			check, err := checkpassword(username, curp1, lib)
+			fmt.Println("")
+			if err != nil {
+				//TODO:
+				return
+			}
+			if !check {
+				fmt.Println("Wrong password!")
+				return
+			}
+			fmt.Println("Input new password:")
+			newp, err := terminal.ReadPassword(0)
+			if err != nil {
+				fmt.Println("")
+				fmt.Println(err.Error())
+				fmt.Println(unexpectederror)
+				return
+			}
+			newp1 := strings.TrimSpace(string(newp))
+			fmt.Println("")
+			fmt.Println("Repeat new password:")
+			rep, err := terminal.ReadPassword(0)
+			if err != nil {
+				fmt.Println("")
+				fmt.Println(err.Error())
+				fmt.Println(unexpectederror)
+				return
+			}
+			rep1 := strings.TrimSpace(string(rep))
+			fmt.Println("")
+			if newp1 != rep1 {
+				fmt.Println("Password dismatched!")
+			} else {
+				err = changepassword(username, newp1, lib)
+				if err != nil {
+					fmt.Println(err.Error())
+					fmt.Println(unexpectederror)
+				} else {
+					fmt.Println("Successfully changed password!")
+				}
+
+			}
+		}
+
 	default:
 		Help()
 	}
@@ -340,7 +401,7 @@ func Help() {
 	fmt.Println(help)
 	if root == 1 {
 		table.OutputA(helpforroot)
-	} else if visiter == true {
+	} else if visitor == true {
 		table.OutputA(helpforvisitor)
 	} else {
 		table.OutputA(helpforuser)
