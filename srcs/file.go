@@ -69,8 +69,8 @@ func readsinglebook(filename string) ([]SingleBook, error) {
 		if err != nil {
 			return nil, err
 		}
-		b, t, i := row[0], row[1], row[2]
-		books = append(books, SingleBook{b, t, i, 1})
+		b, i := row[0], row[1]
+		books = append(books, SingleBook{b, "", i, 1})
 	}
 	return books, nil
 }

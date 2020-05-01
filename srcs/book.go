@@ -86,7 +86,7 @@ func removesinglebook(bookid string, detail string, lib *Library) error {
 			return fmt.Errorf("removed of not returned")
 		}
 	}
-	exec := fmt.Sprintf("insert into removelist(bookid, detail) values ('%s','%s')", bookid, detail)
+	exec := fmt.Sprintf("insert ignore into removelist(bookid, detail) values ('%s','%s')", bookid, detail)
 	_, err = lib.db.Exec(exec)
 	return err
 }

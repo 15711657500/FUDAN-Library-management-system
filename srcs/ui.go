@@ -17,29 +17,52 @@ var (
 	singlebooks []SingleBook
 )
 
-const (
-	help = `Type "help" can get this help.
-quit			quit
-login			login
-logout			logout
-ISBN <ISBN> 	search by ISBN
-title <title>   search by title
-author <author> search by author
-bookid <ISBN>   get bookid of books whose ISBN is <ISBN>"
-borrow <bookid> borrow the book whose id is <bookid>
-return <bookid> 
-`
-	helpforroot = `Type "help" can get this help.
-quit			quit
-login			login
-logout			logout
-ISBN <ISBN> 	search by ISBN
-title <title>   search by title
-author <author> search by author
-bookid <ISBN>   get bookid of books whose ISBN is <ISBN>"
-borrow <bookid> borrow the book whose id is <bookid>
-return <bookid> 
-`
+type MyHelp struct {
+	Command     string
+	Description string
+	Example     string
+}
+
+var (
+	help           = `Type "help" can get this help.`
+	helpforvisitor = []MyHelp{
+		{"quit", "quit", "quit"},
+		{"login", "login", "login"},
+		{"logout", "logout", "logout"},
+		{"ISBN <ISBN>", "search by ISBN", "ISBN abc"},
+		{"title <title>", "search by title", "title abc"},
+		{"author <author>", "search by author", "author a"},
+		{"bookid <ISBN>", "get bookid of books whose ISBN is <ISBN>", "bookid abc"},
+	}
+	helpforuser = []MyHelp{
+		{"quit", "quit", "quit"},
+		{"login", "login", "login"},
+		{"logout", "logout", "logout"},
+		{"ISBN <ISBN>", "search by ISBN", "ISBN abc"},
+		{"title <title>", "search by title", "title abc"},
+		{"author <author>", "search by author", "author a"},
+		{"bookid <ISBN>", "get bookid of books whose ISBN is <ISBN>", "bookid abc"},
+		{"borrow <bookid>", "borrow the book whose id is <bookid>", "borrow 2"},
+		{"return <bookid>", "return the book whose id is <bookid>", "return 2"},
+		{"extend <bookid>", "extend the duedate of book whose id is <bookid>", "extend 2"},
+	}
+	helpforroot = []MyHelp{
+		{"quit", "quit", "quit"},
+		{"login", "login", "login"},
+		{"logout", "logout", "logout"},
+		{"ISBN <ISBN>", "search by ISBN", "ISBN abc"},
+		{"title <title>", "search by title", "title abc"},
+		{"author <author>", "search by author", "author a"},
+		{"bookid <ISBN>", "get bookid of books whose ISBN is <ISBN>", "bookid abc"},
+		{"borrow <bookid>", "borrow the book whose id is <bookid>", "borrow 2"},
+		{"return <bookid>", "return the book whose id is <bookid>", "return 2"},
+		{"extend <bookid>", "extend the duedate of book whose id is <bookid>", "extend 2"},
+		{"add user <username> <password> <root>", "add user", "add user root1 root1 1"},
+		{"add users [filepath]", "add user from csv file, default filepath'../data/users.csv'", "add users"},
+		{"add book <title> <author> <ISBN>", "add book to booklist", "add book a b c"},
+		{"add books [filepath]", "add book to booklist from csv file, default filepath'../data/books.csv'", "add books"},
+		{"add sbook <bookid> <ISBN>", "", ""},
+	}
 )
 
 func handleinput(input string, lib *Library) {
@@ -49,7 +72,7 @@ func handleinput(input string, lib *Library) {
 		if len(args) == 1 {
 			done = true
 		} else {
-			fmt.Print(Help())
+			Help()
 		}
 	case "login":
 		if len(args) == 1 {
@@ -79,7 +102,7 @@ func handleinput(input string, lib *Library) {
 			fmt.Println("")
 			fmt.Printf("Welcome %s!\n", username)
 		} else {
-			fmt.Print(Help())
+			Help()
 		}
 	case "logout":
 		if len(args) == 1 {
@@ -91,7 +114,7 @@ func handleinput(input string, lib *Library) {
 				root = 0
 			}
 		} else {
-			fmt.Print(Help())
+			Help()
 		}
 	case "ISBN":
 		if len(args) == 2 {
@@ -101,7 +124,7 @@ func handleinput(input string, lib *Library) {
 			}
 			outputbook(&books)
 		} else {
-			fmt.Print(Help())
+			Help()
 		}
 	case "title":
 		if len(args) == 2 {
@@ -111,7 +134,7 @@ func handleinput(input string, lib *Library) {
 			}
 			outputbook(&books)
 		} else {
-			fmt.Print(Help())
+			Help()
 		}
 	case "author":
 		if len(args) == 2 {
@@ -121,7 +144,7 @@ func handleinput(input string, lib *Library) {
 			}
 			outputbook(&books)
 		} else {
-			fmt.Print(Help())
+			Help()
 		}
 	case "return":
 		if len(args) == 2 {
@@ -130,7 +153,7 @@ func handleinput(input string, lib *Library) {
 				fmt.Println(err.Error())
 			}
 		} else {
-			fmt.Print(Help())
+			Help()
 		}
 	case "bookid":
 		if len(args) == 2 {
@@ -140,7 +163,7 @@ func handleinput(input string, lib *Library) {
 			}
 			outputsinglebook(&books)
 		} else {
-			fmt.Print(Help())
+			Help()
 		}
 	case "borrow":
 		if len(args) == 2 {
@@ -157,29 +180,29 @@ func handleinput(input string, lib *Library) {
 			}
 
 		} else {
-			fmt.Print(Help())
+			Help()
 		}
 	case "add":
 		if root == 0 {
-			fmt.Print(Help())
+			Help()
 		} else {
 			if len(args) >= 2 {
 				switch args[1] {
 				case "user":
 					if len(args) != 5 {
-						fmt.Print(Help())
+						Help()
 					} else {
 						u, p := args[2], args[3]
 						r, err := strconv.Atoi(args[4])
 						if err != nil {
-							fmt.Print(Help())
+							Help()
 							return
 						}
 						createuser(&User{u, p, r}, lib)
 					}
 				case "users":
 					if len(args) > 3 {
-						fmt.Print(Help())
+						Help()
 					} else {
 						var filepath string
 						if len(args) == 2 {
@@ -189,7 +212,7 @@ func handleinput(input string, lib *Library) {
 						}
 						users, err := readuser(filepath)
 						if err != nil {
-							//fmt.Print(Help())
+							//Help()
 							panic(err)
 							return
 						}
@@ -200,7 +223,7 @@ func handleinput(input string, lib *Library) {
 					}
 				case "book":
 					if len(args) != 5 {
-						fmt.Print(Help())
+						Help()
 					} else {
 						t, a, i := args[2], args[3], args[4]
 						err := addbook(&Book{t, a, i}, lib)
@@ -210,7 +233,7 @@ func handleinput(input string, lib *Library) {
 					}
 				case "books":
 					if len(args) > 3 {
-						fmt.Print(Help())
+						Help()
 					} else {
 						var filepath string
 						if len(args) == 2 {
@@ -220,7 +243,7 @@ func handleinput(input string, lib *Library) {
 						}
 						books, err := readbook(filepath)
 						if err != nil {
-							//fmt.Print(Help())
+							//Help()
 							panic(err)
 							return
 						}
@@ -230,18 +253,18 @@ func handleinput(input string, lib *Library) {
 						}
 					}
 				case "sbook":
-					if len(args) != 5 {
-						fmt.Print(Help())
+					if len(args) != 4 {
+						Help()
 					} else {
-						b, t, i := args[2], args[3], args[4]
-						err := addsinglebook(&SingleBook{b, t, i, 1}, lib)
+						b, i := args[2], args[3]
+						err := addsinglebook(&SingleBook{b, "", i, 1}, lib)
 						if err != nil {
 							panic(err)
 						}
 					}
 				case "sbooks":
 					if len(args) > 3 {
-						fmt.Print(Help())
+						Help()
 					} else {
 						var filepath string
 						if len(args) == 2 {
@@ -251,7 +274,7 @@ func handleinput(input string, lib *Library) {
 						}
 						sbooks, err := readsinglebook(filepath)
 						if err != nil {
-							//fmt.Print(Help())
+							//Help()
 							panic(err)
 							return
 						}
@@ -261,15 +284,26 @@ func handleinput(input string, lib *Library) {
 						}
 					}
 				default:
-					fmt.Print(Help())
+					Help()
 				}
 			} else {
-				fmt.Print(Help())
+				Help()
 			}
 		}
-
+	case "extend":
+		if len(args) != 2 {
+			Help()
+		} else {
+			bookid := args[1]
+			err := extend(bookid, username, lib)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				fmt.Println("Successfully extend!")
+			}
+		}
 	default:
-		fmt.Print(Help())
+		Help()
 	}
 	return
 }
@@ -289,10 +323,13 @@ func outputsinglebook(books *[]SingleBook) {
 	}
 	return
 }
-func Help() string {
+func Help() {
+	fmt.Println(help)
 	if root == 1 {
-		return helpforroot
+		table.OutputA(helpforroot)
+	} else if visiter == true {
+		table.OutputA(helpforvisitor)
 	} else {
-		return help
+		table.OutputA(helpforuser)
 	}
 }

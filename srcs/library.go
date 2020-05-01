@@ -137,6 +137,7 @@ func main() {
 			handleinput(input, &lib)
 		}
 		if done {
+			fmt.Println("Bye!")
 			break
 		}
 	}

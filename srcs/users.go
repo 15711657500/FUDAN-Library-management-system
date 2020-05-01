@@ -126,3 +126,8 @@ func createuser_batch(user *[]User, lib *Library) error {
 	_, err := lib.db.Exec(exec)
 	return err
 }
+func changepassword(username string, password string, lib *Library) error {
+	exec1 := fmt.Sprintf("update users set password = '%s' where username = '%s'", getSHA256(password), username)
+	_, err := lib.db.Exec(exec1)
+	return err
+}

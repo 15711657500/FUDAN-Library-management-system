@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 )
@@ -60,14 +61,15 @@ func rentsinglebook(bookid string, username string, lib *Library) error {
 	if !able {
 		return restricted
 	}
-	query1 := fmt.Sprintf("select count(*) from singlebook where bookid = '%s' and available = 1", bookid)
+	query1 := fmt.Sprintf("select count(*), ISBN from singlebook where bookid = '%s' and available = 1 group by bookid", bookid)
 	rows, err := lib.db.Queryx(query1)
 	if err != nil {
 		return err
 	}
 	var i int
+	var ISBN string
 	for rows.Next() {
-		err = rows.Scan(&i)
+		err = rows.Scan(&i, &ISBN)
 		if err != nil {
 			return err
 		}
@@ -85,6 +87,11 @@ func rentsinglebook(bookid string, username string, lib *Library) error {
 	}
 	exec2 := fmt.Sprintf("update singlebook set available = 0 where bookid = '%s'", bookid)
 	_, err = lib.db.Exec(exec2)
+	if err != nil {
+		return err
+	}
+	exec3 := fmt.Sprintf("update booklist set visits = visits + 1 where ISBN = '%s'", ISBN)
+	_, err = lib.db.Exec(exec3)
 	return err
 }
 func querybookbyISBN(ISBN string, lib *Library) ([]Book, error) {
@@ -271,21 +278,24 @@ func queryduedate(bookid string, lib *Library) (string, error) {
 }
 func extend(bookid string, username string, lib *Library) error {
 	fail := fmt.Errorf("Unable to extend!")
-	query1 := fmt.Sprintf("select count(*), duedate, rentid from rent where returndate = 'not returned yet' and bookid = '%s' and username = '%s'", bookid, username)
+	query1 := fmt.Sprintf("select duedate, rentid from rent where returndate = 'not returned yet' and bookid = '%s' and username = '%s'", bookid, username)
 	rows1, err := lib.db.Queryx(query1)
+	if err == sql.ErrNoRows {
+		return fail
+	}
 	if err != nil {
 		return err
 	}
+
 	var duedate string
-	var rentid, i int
+	var rentid int
 	for rows1.Next() {
-		err = rows1.Scan(&i, &duedate, &rentid)
+		err = rows1.Scan(&duedate, &rentid)
 		if err != nil {
 			return err
 		}
-
 	}
-	if i != 1 {
+	if duedate == "" {
 		return fail
 	}
 	newduedate, err := time.Parse(dateformat, duedate)
@@ -293,7 +303,7 @@ func extend(bookid string, username string, lib *Library) error {
 		return err
 	}
 	newduedate1 := time.Unix(newduedate.Unix(), int64(du*time.Hour*24)).Format(dateformat)
-	exec1 := fmt.Sprintf("update rent set returndate = '%s' where rentid = %d", newduedate1, rentid)
+	exec1 := fmt.Sprintf("update rent set duedate = '%s' where rentid = %d", newduedate1, rentid)
 	_, err = lib.db.Exec(exec1)
 	return err
 }
