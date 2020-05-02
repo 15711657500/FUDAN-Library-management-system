@@ -40,6 +40,8 @@ var (
 		{"borrow <bookid>", "borrow the book whose id is <bookid>", "borrow 2"},
 		{"return <bookid>", "return the book whose id is <bookid>", "return 2"},
 		{"extend <bookid>", "extend the duedate of book whose id is <bookid>", "extend 2"},
+		{"changepassword", "change your password", "changepassword"},
+		{"list", "query your borrow record", "list"},
 	}
 	helpforroot = []MyHelp{
 		{"quit", "quit", "quit"},
@@ -52,12 +54,14 @@ var (
 		{"borrow <bookid>", "borrow the book whose id is <bookid>", "borrow 2"},
 		{"return <bookid>", "return the book whose id is <bookid>", "return 2"},
 		{"extend <bookid>", "extend the duedate of book whose id is <bookid>", "extend 2"},
+		{"changepassword", "change your password", "changepassword"},
 		{"add user <username> <password> <root>", "add user", "add user root1 root1 1"},
 		{"add users [filepath]", "add user from csv file, default filepath'../data/users.csv'", "add users"},
 		{"add book <title> <author> <ISBN>", "add book to booklist", "add book a b c"},
 		{"add books [filepath]", "add book to booklist from csv file, default filepath'../data/books.csv'", "add books"},
 		{"add sbook <bookid> <ISBN>", "add singlebook", "add a b"},
 		{"add sbooks [filepath]", "add singlebook from csv file, default filepath'../data/sbooks.csv'", "add sbooks"},
+		{"list [username]", "query borrow record of [username], default yours", "list 18307130001"},
 	}
 )
 
@@ -375,7 +379,43 @@ func handleinput(input string, lib *Library) {
 
 			}
 		}
-
+	case "list":
+		if visitor {
+			Help()
+		} else if root == 0 {
+			if len(args) > 1 {
+				Help()
+			} else {
+				rents, err := queryrentrecord(username, lib)
+				if err != nil {
+					fmt.Println(err.Error())
+					fmt.Println(unexpectederror)
+				} else {
+					outputrent(&rents)
+				}
+			}
+		} else {
+			switch len(args) {
+			case 1:
+				rents, err := queryrentrecord(username, lib)
+				if err != nil {
+					fmt.Println(err.Error())
+					fmt.Println(unexpectederror)
+				} else {
+					outputrent(&rents)
+				}
+			case 2:
+				rents, err := queryrentrecord(args[1], lib)
+				if err != nil {
+					fmt.Println(err.Error())
+					fmt.Println(unexpectederror)
+				} else {
+					outputrent(&rents)
+				}
+			default:
+				Help()
+			}
+		}
 	default:
 		Help()
 	}
@@ -396,6 +436,13 @@ func outputsinglebook(books *[]SingleBook) {
 		fmt.Println("Book not found!")
 	}
 	return
+}
+func outputrent(rents *[]Rent) {
+	if len(*rents) > 0 {
+		table.OutputA(*rents)
+	} else {
+		fmt.Println("Borrow record not found!")
+	}
 }
 func Help() {
 	fmt.Println(help)

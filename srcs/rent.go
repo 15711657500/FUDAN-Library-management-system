@@ -13,14 +13,14 @@ var (
 )
 
 type Rent struct {
-	rentdate   string
-	duedate    string
-	returndate string
-	fine       float32
-	bookid     string
+	Rentdate   string
+	Duedate    string
+	Returndate string
+	Fine       float32
+	Bookid     string
 	ISBN       string
-	title      string
-	author     string
+	Title      string
+	Author     string
 }
 
 const (
@@ -282,7 +282,7 @@ func queryrentrecord(username string, lib *Library) ([]Rent, error) {
 		if err != nil {
 			return nil, err
 		}
-		rent = append(rent, Rent{rentdate: rentdate, duedate: duedate, returndate: returndate, fine: fine, bookid: bookid, ISBN: ISBN, title: title, author: author})
+		rent = append(rent, Rent{Rentdate: rentdate, Duedate: duedate, Returndate: returndate, Fine: fine, Bookid: bookid, ISBN: ISBN, Title: title, Author: author})
 
 	}
 	return rent, nil
