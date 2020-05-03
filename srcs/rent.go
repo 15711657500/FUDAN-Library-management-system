@@ -29,7 +29,11 @@ const (
 
 // errors
 var (
-	returnnotfound = fmt.Errorf("Unable to return!")
+	returnnotfound   = fmt.Errorf("Unable to return!")
+	booknotfound     = fmt.Errorf("Book not found!")
+	appointavailable = fmt.Errorf("This book is already available!")
+	appointborrowed  = fmt.Errorf("You've already borrowed this book!")
+	appointed        = fmt.Errorf("You've already appointed this book!")
 )
 
 // drop table rent
@@ -57,6 +61,20 @@ func createrent(lib *Library) error {
 	foreign key (bookid) references singlebook(bookid)
 );
 `)
+	if err != nil {
+		return err
+	}
+	_, err = lib.db.Exec(`
+	create table if not exists appointment
+(
+    id int primary key auto_increment,
+    username nvarchar(200),
+    bookid nvarchar(200),
+    borrowed nvarchar(200) default "No",
+    foreign key (username) references users(username),
+	foreign key (bookid) references singlebook(bookid)
+)
+`)
 	return err
 }
 
@@ -83,9 +101,21 @@ func rentsinglebook(bookid string, username string, lib *Library) error {
 		if err != nil {
 			return err
 		}
-
 	}
-	if i != 1 {
+
+	query2 := fmt.Sprintf("select username from appointment where bookid = '%s' order by id asc limit 1 ", bookid)
+	rows2, err := lib.db.Queryx(query2)
+	if err != nil {
+		return err
+	}
+	var earliest string
+	for rows2.Next() {
+		err = rows.Scan(&earliest)
+		if err != nil {
+			return err
+		}
+	}
+	if i != 1 && earliest != username {
 		return restricted
 	}
 	rentdate := time.Now().Format(dateformat)
@@ -102,6 +132,11 @@ func rentsinglebook(bookid string, username string, lib *Library) error {
 	}
 	exec3 := fmt.Sprintf("update booklist set visits = visits + 1 where ISBN = '%s'", ISBN)
 	_, err = lib.db.Exec(exec3)
+	if err != nil {
+		return err
+	}
+	exec4 := fmt.Sprintf("update appointment set borrowed = 'Yes' where bookid = '%s' and username = '%s' and borrowed = 'No'", bookid, username)
+	_, err = lib.db.Exec(exec4)
 	return err
 }
 
@@ -258,6 +293,13 @@ func returnsinglebook(bookid string, username string, lib *Library) error {
 	if err != nil {
 		return err
 	}
+	i2, err := queryappoint(bookid, lib)
+	if err != nil {
+		return err
+	}
+	if i2 != 0 {
+		return nil
+	}
 	exec2 := fmt.Sprintf("update singlebook set available = 1 where bookid = '%s'", bookid)
 	_, err = lib.db.Exec(exec2)
 	return err
@@ -342,4 +384,150 @@ func extend(bookid string, username string, lib *Library) error {
 	exec1 := fmt.Sprintf("update rent set duedate = '%s' where rentid = %d", newduedate1, rentid)
 	_, err = lib.db.Exec(exec1)
 	return err
+}
+
+// appoint
+func appoint(bookid string, username string, lib *Library) (int, error) {
+	// wrong bookid?
+	query1 := fmt.Sprintf("select count(*) from singlebook where bookid = '%s'", bookid)
+	rows1, err := lib.db.Queryx(query1)
+	if err != nil {
+		return 0, err
+	}
+	i1 := 3
+	for rows1.Next() {
+		err = rows1.Scan(&i1)
+		if err != nil {
+			return 0, err
+		}
+	}
+	if i1 == 0 {
+		return 0, booknotfound
+	}
+	// this book is removed?
+	query2 := fmt.Sprintf("select count(*) from removelist where bookid = '%s'", bookid)
+	rows2, err := lib.db.Queryx(query2)
+	if err != nil {
+		return 0, err
+	}
+	i2 := 3
+	for rows2.Next() {
+		err = rows2.Scan(&i2)
+		if err != nil {
+			return 0, err
+		}
+	}
+	if i2 == 1 {
+		return 0, booknotfound
+	}
+	// this book is already awailable?
+	query3 := fmt.Sprintf("select count(*) from singlebook where available = 1 and bookid = '%s'", bookid)
+	rows3, err := lib.db.Queryx(query3)
+	if err != nil {
+		return 0, err
+	}
+	i3 := 3
+	for rows3.Next() {
+		err = rows3.Scan(&i3)
+		if err != nil {
+			return 0, err
+		}
+	}
+	if i3 == 1 {
+		return 0, appointavailable
+	}
+	// have borrowed this book?
+	query4 := fmt.Sprintf("select count(*) from rent where returndate = 'not returned yet' and username = '%s'", username)
+	rows4, err := lib.db.Queryx(query4)
+	if err != nil {
+		return 0, err
+	}
+	i4 := 3
+	for rows4.Next() {
+		err = rows4.Scan(&i4)
+		if err != nil {
+			return 0, err
+		}
+	}
+	if i4 == 1 {
+		return 0, appointborrowed
+	}
+	// have appointed this book?
+	i5, err := checkappoint(bookid, username, lib)
+	if i5 {
+		return 0, appointed
+	}
+	// appoint
+	exec := fmt.Sprintf("insert into appointment(bookid, username) values('%s','%s')", bookid, username)
+	_, err = lib.db.Exec(exec)
+	if err != nil {
+		return 0, err
+	}
+	i6, err := queryappointbehinduser(bookid, username, lib)
+	if err != nil {
+		return 0, err
+	}
+	return i6, nil
+}
+
+//
+func queryappoint(bookid string, lib *Library) (int, error) {
+	query := fmt.Sprintf("select count(*) from appointment where bookid = '%s' and borrowed = 'No'", bookid)
+	rows, err := lib.db.Queryx(query)
+	if err != nil {
+		return 0, err
+	}
+	i := 3
+	for rows.Next() {
+		err = rows.Scan(&i)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return i, nil
+}
+
+//
+func queryappointbehinduser(bookid string, username string, lib *Library) (int, error) {
+	done, err := checkappoint(bookid, username, lib)
+	if err != nil {
+		return 0, err
+	}
+	if !done {
+		return 0, err
+	}
+	query := fmt.Sprintf("select count(*) from appointment A where A.bookid = '%s' and A.borrowed = 'No' and id < all(select B.id from appointment B where B.bookid = '%s' and B.username = '%s' and B.borrowed = 'No')", bookid, bookid, username)
+	rows, err := lib.db.Queryx(query)
+	if err != nil {
+		return 0, err
+	}
+	var i int
+	for rows.Next() {
+		err = rows.Scan(&i)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return i, nil
+}
+
+//
+func checkappoint(bookid string, username string, lib *Library) (bool, error) {
+	query := fmt.Sprintf("select count(*) from appointment where bookid = '%s' and username = '%s' and borrowed = 'No'", bookid, username)
+	rows, err := lib.db.Queryx(query)
+	if err != nil {
+		return false, err
+	}
+	i := 3
+	for rows.Next() {
+		err = rows.Scan(&i)
+		if err != nil {
+			return false, err
+		}
+	}
+	if i == 0 {
+		return false, nil
+	} else {
+		return true, nil
+	}
 }

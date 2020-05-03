@@ -22,6 +22,7 @@ var (
 	visitor  = true
 	username = "visitor"
 	root     = 0
+	reader   = bufio.NewReader(os.Stdin)
 )
 
 type Library struct {
@@ -85,7 +86,7 @@ func main() {
 	for {
 		output := fmt.Sprintf("%s@FUDAN<", username)
 		print(output)
-		input, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		input, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Println(err.Error())
 			fmt.Println("Unexpected error! Force to quit!")

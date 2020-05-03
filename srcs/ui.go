@@ -2,14 +2,12 @@ package main
 
 import "C"
 import (
-	"bufio"
 	"fmt"
 	"github.com/modood/table"
 	"os"
 	"strconv"
 	"strings"
-	//"golang.org/x/crypto/ssh"
-	terminal "golang.org/x/crypto/ssh/terminal"
+	"syscall"
 )
 
 type MyHelp struct {
@@ -81,7 +79,7 @@ func handleinput(input string, lib *Library) {
 	case "login":
 		if len(args) == 1 {
 			fmt.Print("username:")
-			user1, err := bufio.NewReader(os.Stdin).ReadString('\n')
+			user1, err := reader.ReadString('\n')
 
 			if err != nil {
 				fmt.Println("")
@@ -91,11 +89,18 @@ func handleinput(input string, lib *Library) {
 			}
 			user1 = strings.TrimSpace(user1)
 			fmt.Print("password:")
-			passwd1, err := terminal.ReadPassword(0)
+			//passwd1, err := terminal.ReadPassword(0)
+			//if err != nil {
+			//	panic(err)
+			//}
+			//password1 := strings.TrimSpace(string(passwd1))
+			disableecho(true)
+			password1, err := reader.ReadString('\n')
 			if err != nil {
 				panic(err)
 			}
-			password1 := strings.TrimSpace(string(passwd1))
+			disableecho(false)
+			password1 = strings.TrimSpace(password1)
 			err = login(&User{user1, password1, 0}, lib)
 			if err != nil && err.Error() == loginerror.Error() {
 				fmt.Println("")
@@ -328,14 +333,13 @@ func handleinput(input string, lib *Library) {
 			Help()
 		} else {
 			fmt.Println("Current password:")
-			curp, err := terminal.ReadPassword(0)
+			disableecho(true)
+			curp1, err := reader.ReadString('\n')
 			if err != nil {
-				fmt.Println("")
-				fmt.Println(err.Error())
-				fmt.Println(unexpectederror)
-				return
+				panic(err)
 			}
-			curp1 := strings.TrimSpace(string(curp))
+			disableecho(false)
+			curp1 = strings.TrimSpace(curp1)
 			check, err := checkpassword(username, curp1, lib)
 			fmt.Println("")
 			if err != nil {
@@ -347,24 +351,22 @@ func handleinput(input string, lib *Library) {
 				return
 			}
 			fmt.Println("Input new password:")
-			newp, err := terminal.ReadPassword(0)
+			disableecho(true)
+			newp1, err := reader.ReadString('\n')
 			if err != nil {
-				fmt.Println("")
-				fmt.Println(err.Error())
-				fmt.Println(unexpectederror)
-				return
+				panic(err)
 			}
-			newp1 := strings.TrimSpace(string(newp))
+			disableecho(false)
+			newp1 = strings.TrimSpace(string(newp1))
 			fmt.Println("")
 			fmt.Println("Repeat new password:")
-			rep, err := terminal.ReadPassword(0)
+			disableecho(true)
+			rep1, err := reader.ReadString('\n')
 			if err != nil {
-				fmt.Println("")
-				fmt.Println(err.Error())
-				fmt.Println(unexpectederror)
-				return
+				panic(err)
 			}
-			rep1 := strings.TrimSpace(string(rep))
+			disableecho(false)
+			rep1 = strings.TrimSpace(string(rep1))
 			fmt.Println("")
 			if newp1 != rep1 {
 				fmt.Println("Password dismatched!")
@@ -416,6 +418,21 @@ func handleinput(input string, lib *Library) {
 				Help()
 			}
 		}
+	case "appoint":
+		if len(args) != 2 {
+			Help()
+		} else if visitor {
+			Help()
+		} else {
+			i, err := appoint(args[1], username, lib)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				fmt.Println("Successfully appointed!")
+				fmt.Printf("There are %d people behind!\n", i)
+			}
+		}
+
 	default:
 		Help()
 	}
@@ -453,4 +470,44 @@ func Help() {
 	} else {
 		table.OutputA(helpforuser)
 	}
+}
+func disableecho(b bool) {
+	attrs := syscall.ProcAttr{
+		Dir:   "",
+		Env:   []string{},
+		Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
+		Sys:   nil}
+	var ws syscall.WaitStatus
+	if b {
+		pid, err := syscall.ForkExec(
+			"/bin/stty",
+			[]string{"stty", "-echo"},
+			&attrs)
+		if err != nil {
+			panic(err)
+		}
+		_, err = syscall.Wait4(pid, &ws, 0, nil)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		attrs := syscall.ProcAttr{
+			Dir:   "",
+			Env:   []string{},
+			Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
+			Sys:   nil}
+		var ws syscall.WaitStatus
+		pid, err := syscall.ForkExec(
+			"/bin/stty",
+			[]string{"stty", "echo"},
+			&attrs)
+		if err != nil {
+			panic(err)
+		}
+		_, err = syscall.Wait4(pid, &ws, 0, nil)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 }
