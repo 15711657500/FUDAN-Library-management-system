@@ -6,5 +6,4 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/modood/table v0.0.0-20200225102042-88de94bb9876
-	golang.org/x/crypto v0.0.0-20200427165652-729f1e841bcc
 )

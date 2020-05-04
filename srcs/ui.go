@@ -26,6 +26,7 @@ var (
 		{"title <title> [title, ...]", "search by title in mutiple keywords", "title math analysis"},
 		{"author <author>", "search by author", "author a"},
 		{"bookid <ISBN>", "get bookid of books whose ISBN is <ISBN>", "bookid abc"},
+		{"duedate <bookid>", "query the duedate of a borrowed book", "duedate 1"},
 	}
 	helpforuser = []MyHelp{
 		{"quit", "quit", "quit"},
@@ -40,6 +41,8 @@ var (
 		{"extend <bookid>", "extend the duedate of book whose id is <bookid>", "extend 2"},
 		{"changepassword", "change your password", "changepassword"},
 		{"list", "query your borrow record", "list"},
+		{"duedate <bookid>", "query the duedate of a borrowed book", "duedate 1"},
+		{"overdue", "query overdue books of your account", "overdue"},
 	}
 	helpforroot = []MyHelp{
 		{"quit", "quit", "quit"},
@@ -49,6 +52,7 @@ var (
 		{"title <title> [title, ...]", "search by title in mutiple keywords", "title math analysis"},
 		{"author <author>", "search by author", "author a"},
 		{"bookid <ISBN>", "get bookid of books whose ISBN is <ISBN>", "bookid abc"},
+		{"duedate <bookid>", "query the duedate of a borrowed book", "duedate 1"},
 		{"borrow <bookid>", "borrow the book whose id is <bookid>", "borrow 2"},
 		{"return <bookid>", "return the book whose id is <bookid>", "return 2"},
 		{"extend <bookid>", "extend the duedate of book whose id is <bookid>", "extend 2"},
@@ -60,6 +64,7 @@ var (
 		{"add sbook <bookid> <ISBN>", "add singlebook", "add a b"},
 		{"add sbooks [filepath]", "add singlebook from csv file, default filepath'../data/sbooks.csv'", "add sbooks"},
 		{"list [username]", "query borrow record of [username], default yours", "list 18307130001"},
+		{"overdue [username]", "query overdue books of the account, default yours", "overdue 18307130001"},
 	}
 )
 
@@ -115,6 +120,24 @@ func handleinput(input string, lib *Library) {
 
 			fmt.Println("")
 			fmt.Printf("Welcome %s!\n", username)
+			books1, err := loginduedate(username, lib)
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+			if books1 != nil {
+				fmt.Println("You should return the following books as soon as possible!")
+				table.OutputA(books1)
+			}
+			books2, err := loginappoint(username, lib)
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+			if books2 != nil {
+				fmt.Println("You can borrow the following books that you have appointed!")
+				table.OutputA(books2)
+			}
 		} else {
 			Help()
 		}
@@ -432,7 +455,40 @@ func handleinput(input string, lib *Library) {
 				fmt.Printf("There are %d people behind!\n", i)
 			}
 		}
-
+	case "duedate":
+		if len(args) != 2 {
+			Help()
+		} else {
+			duedate, err := queryduedate(args[1], lib)
+			if err != nil && err.Error() == booknotfound.Error() {
+				fmt.Println(booknotfound.Error())
+			} else if err != nil {
+				fmt.Println(err.Error())
+				fmt.Println(unexpectederror)
+			} else {
+				fmt.Println(duedate)
+			}
+		}
+	case "overdue":
+		if visitor {
+			Help()
+		} else if len(args) == 1 {
+			rents, err := queryoverdue(username, lib)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				outputrent(&rents)
+			}
+		} else if len(args) == 2 && root > 0 {
+			rents, err := queryoverdue(args[1], lib)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				outputrent(&rents)
+			}
+		} else {
+			Help()
+		}
 	default:
 		Help()
 	}

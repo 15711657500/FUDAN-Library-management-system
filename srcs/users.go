@@ -56,7 +56,7 @@ func getSHA256(input string) string {
 
 // add an account to table users
 func adduser(user *User, lib *Library) error {
-	username1, password1 := user.username, user.password
+	username1, password1, root1 := user.username, user.password, user.root
 	query := fmt.Sprintf("select count(*) from users where username = '%s'", username1)
 	rows, err := lib.db.Queryx(query)
 	if err != nil {
@@ -74,12 +74,9 @@ func adduser(user *User, lib *Library) error {
 		return err
 	}
 	password1 = getSHA256(password1)
-	var exec string
-	if user.root != 0 {
-		exec = fmt.Sprintf("insert ignore into users(username, password, admin) values ('%s', '%s', 1)", username1, password1)
-	} else {
-		exec = fmt.Sprintf("insert ignore into users(username, password) values ('%s', '%s')", username1, password1)
-	}
+
+	exec := fmt.Sprintf("insert ignore into users(username, password, root) values ('%s', '%s', '%d')", username1, password1, root1)
+
 	_, err = lib.db.Exec(exec)
 	if err != nil {
 		return err

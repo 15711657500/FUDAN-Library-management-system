@@ -7,9 +7,10 @@ import (
 )
 
 var (
-	du         time.Duration = 30
+	du         time.Duration = -1
 	maxrent    int           = 30
 	maxoverdue int           = 3
+	fineperday float32       = 0.1
 )
 
 type Rent struct {
@@ -110,7 +111,7 @@ func rentsinglebook(bookid string, username string, lib *Library) error {
 	}
 	var earliest string
 	for rows2.Next() {
-		err = rows.Scan(&earliest)
+		err = rows2.Scan(&earliest)
 		if err != nil {
 			return err
 		}
@@ -163,7 +164,7 @@ func querybookbyISBN(ISBN string, lib *Library) ([]Book, error) {
 // query the booklist by author
 func querybookbyauthor(author string, lib *Library) ([]Book, error) {
 	var books []Book
-	query := fmt.Sprintf("select title, author, ISBN from booklist where author = '%s'", author)
+	query := fmt.Sprintf("select title, author, ISBN from booklist where author like '%%%s%%'", author)
 	rows, err := lib.db.Queryx(query)
 	if err != nil {
 		return nil, err
@@ -272,14 +273,15 @@ func checkrent(username string, lib *Library) (bool, error) {
 
 // return a book
 func returnsinglebook(bookid string, username string, lib *Library) error {
-	query := fmt.Sprintf("select count(*), rentid from rent where bookid = '%s' and username = '%s' and returndate = 'not returned yet' group by rentid", bookid, username)
+	query := fmt.Sprintf("select count(*), rentid, duedate from rent where bookid = '%s' and username = '%s' and returndate = 'not returned yet' group by rentid", bookid, username)
 	rows, err := lib.db.Queryx(query)
 	var rentid, i int
+	var duedate string
 	if err != nil {
 		return err
 	}
 	for rows.Next() {
-		err = rows.Scan(&i, &rentid)
+		err = rows.Scan(&i, &rentid, &duedate)
 		if err != nil {
 			return err
 		}
@@ -288,11 +290,20 @@ func returnsinglebook(bookid string, username string, lib *Library) error {
 		return returnnotfound
 	}
 	returndate := time.Now().Format(dateformat)
-	exec1 := fmt.Sprintf("update rent set returndate = '%s' where rentid = %d", returndate, rentid)
+	duedate1, err := time.Parse(dateformat, duedate)
+	if err != nil {
+		return err
+	}
+	var fine float32 = 0.0
+	if duedate1.Unix()-time.Now().Unix() < 0 {
+		fine = float32((-duedate1.Unix()+time.Now().Unix()-1)/86400+1) * fineperday
+	}
+	exec1 := fmt.Sprintf("update rent set returndate = '%s', fine = %f where rentid = %d", returndate, fine, rentid)
 	_, err = lib.db.Exec(exec1)
 	if err != nil {
 		return err
 	}
+
 	i2, err := queryappoint(bookid, lib)
 	if err != nil {
 		return err
@@ -330,9 +341,33 @@ func queryrentrecord(username string, lib *Library) ([]Rent, error) {
 	return rent, nil
 }
 
+// query the overdue books of a user
+func queryoverdue(username string, lib *Library) ([]Rent, error) {
+	var rentdate, duedate, returndate, bookid, ISBN, title, author string
+	var fine float32
+	var rent []Rent
+	query := fmt.Sprintf(`select rentdate, duedate, returndate, fine, rent.bookid, booklist.ISBN, title, author 
+								from rent, booklist, singlebook 
+								where username = '%s' and and returndate = 'not returned yet' and duedate < '%s' and rent.bookid = singlebook.bookid 
+								and singlebook.ISBN = booklist.ISBN
+								order by rentdate`, username, time.Now().Format(dateformat))
+	rows, err := lib.db.Queryx(query)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		err = rows.Scan(&rentdate, &duedate, &returndate, &fine, &bookid, &ISBN, &title, &author)
+		if err != nil {
+			return nil, err
+		}
+		rent = append(rent, Rent{Rentdate: rentdate, Duedate: duedate, Returndate: returndate, Fine: fine, Bookid: bookid, ISBN: ISBN, Title: title, Author: author})
+
+	}
+	return rent, nil
+}
+
 // query the duedate of a book
 func queryduedate(bookid string, lib *Library) (string, error) {
-	notfound := fmt.Errorf("You have not borrowed this book!")
 	query1 := fmt.Sprintf("select count(*), duedate from rent where returndate = 'not returned yet' and bookid = '%s'", bookid)
 	rows1, err := lib.db.Queryx(query1)
 	if err != nil {
@@ -348,7 +383,7 @@ func queryduedate(bookid string, lib *Library) (string, error) {
 
 	}
 	if i != 1 {
-		return "", notfound
+		return "", booknotfound
 	}
 	return duedate, nil
 }
@@ -437,7 +472,7 @@ func appoint(bookid string, username string, lib *Library) (int, error) {
 		return 0, appointavailable
 	}
 	// have borrowed this book?
-	query4 := fmt.Sprintf("select count(*) from rent where returndate = 'not returned yet' and username = '%s'", username)
+	query4 := fmt.Sprintf("select count(*) from rent where returndate = 'not returned yet' and bookid = '%s' and username = '%s'", bookid, username)
 	rows4, err := lib.db.Queryx(query4)
 	if err != nil {
 		return 0, err
@@ -518,7 +553,7 @@ func checkappoint(bookid string, username string, lib *Library) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	i := 3
+	i := 0
 	for rows.Next() {
 		err = rows.Scan(&i)
 		if err != nil {
@@ -530,4 +565,71 @@ func checkappoint(bookid string, username string, lib *Library) (bool, error) {
 	} else {
 		return true, nil
 	}
+}
+
+//
+func loginduedate(username string, lib *Library) ([]Bookwithdate, error) {
+	var books []Bookwithdate
+	query := fmt.Sprintf("select bookid, duedate from rent where returndate = 'not returned yet' and username = '%s'", username)
+	rows, err := lib.db.Queryx(query)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var b, d string
+		err = rows.Scan(&b, &d)
+		if err != nil {
+			return nil, err
+		}
+		duedate, err := time.Parse(dateformat, d)
+		if err != nil {
+			return nil, err
+		}
+		if duedate.Unix()-time.Now().Unix() > 3600*24*7 {
+			continue
+		}
+		book, err := bookid2Book(b, lib)
+		if err != nil {
+			return nil, err
+		}
+		books = append(books, Bookwithdate{
+			Bookid: book.Bookid,
+			Title:  book.Title,
+			ISBN:   book.ISBN,
+			Date:   d,
+		})
+	}
+	return books, nil
+}
+
+func loginappoint(username string, lib *Library) ([]Bookforappoint, error) {
+	var books []Bookforappoint
+	query := fmt.Sprintf(`
+	select A.bookid from appointment A
+	where A.username = '%s' 
+	and A.borrowed = 'No'
+	and A.id <= all(select B.id from appointment B where B.bookid = A.bookid and B.borrowed = 'No')
+	and not exists (select * from rent where bookid = A.bookid and returndate = 'not returned yet')
+`, username)
+	rows, err := lib.db.Queryx(query)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var b string
+		err = rows.Scan(&b)
+		if err != nil {
+			return nil, err
+		}
+		book, err := bookid2Book(b, lib)
+		if err != nil {
+			return nil, err
+		}
+		books = append(books, Bookforappoint{
+			Bookid: book.Bookid,
+			Title:  book.Title,
+			ISBN:   book.ISBN,
+		})
+	}
+	return books, nil
 }

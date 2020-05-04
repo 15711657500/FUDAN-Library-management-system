@@ -15,6 +15,17 @@ type SingleBook struct {
 	ISBN      string
 	Available int
 }
+type Bookwithdate struct {
+	Bookid string
+	Title  string
+	ISBN   string
+	Date   string
+}
+type Bookforappoint struct {
+	Bookid string
+	Title  string
+	ISBN   string
+}
 
 // drop table booklist and singlebook
 func resetbook(lib *Library) error {
@@ -80,7 +91,7 @@ func addsinglebook(book *SingleBook, lib *Library) error {
 
 // add a singlebook to removelist and set available = 0 in table singlebook
 func removesinglebook(bookid string, detail string, lib *Library) error {
-	query := fmt.Sprintf("select count(*) from singlebook where bookid = '%s' and available = 1", bookid)
+	query := fmt.Sprintf("select count(*) from rent where bookid = '%s' and returndate = 'not returned yet'", bookid)
 	rows, err := lib.db.Queryx(query)
 	if err != nil {
 		return err
@@ -91,12 +102,17 @@ func removesinglebook(bookid string, detail string, lib *Library) error {
 		if err != nil {
 			return err
 		}
-		if i != 1 {
+		if i != 0 {
 			return fmt.Errorf("removed of not returned")
 		}
 	}
 	exec := fmt.Sprintf("insert ignore into removelist(bookid, detail) values ('%s','%s')", bookid, detail)
 	_, err = lib.db.Exec(exec)
+	if err != nil {
+		return err
+	}
+	exec2 := fmt.Sprintf("update booklist set available = 0 where bookid = '%s'", bookid)
+	_, err = lib.db.Exec(exec2)
 	return err
 }
 
@@ -132,4 +148,21 @@ func addsinglebook_batch(books *[]SingleBook, lib *Library) error {
 	}
 	_, err := lib.db.Exec(exec)
 	return err
+}
+
+func bookid2Book(bookid string, lib *Library) (SingleBook, error) {
+	var b, t, i string
+	var a int
+	query := fmt.Sprintf("select bookid, title, singlebook.ISBN, available from singlebook, booklist where bookid = '%s' and singlebook.ISBN = booklist.ISBN", bookid)
+	rows, err := lib.db.Queryx(query)
+	if err != nil {
+		return SingleBook{"", "", "", 0}, err
+	}
+	for rows.Next() {
+		err = rows.Scan(&b, &t, &i, &a)
+		if err != nil {
+			return SingleBook{"", "", "", 0}, err
+		}
+	}
+	return SingleBook{b, t, i, a}, nil
 }
