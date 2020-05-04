@@ -633,3 +633,21 @@ func loginappoint(username string, lib *Library) ([]Bookforappoint, error) {
 	}
 	return books, nil
 }
+
+func topten(lib *Library) ([]Bookwithvisit, error) {
+	var books []Bookwithvisit
+	rows, err := lib.db.Queryx("select title, author, ISBN from booklist order by visits desc limit 10")
+	if err != nil {
+		return nil, err
+	}
+	j := 1
+	for rows.Next() {
+		var t, a, i string
+		err = rows.Scan(&t, &a, &i)
+		if err != nil {
+			return nil, err
+		}
+		books = append(books, Bookwithvisit{t, a, i, j})
+	}
+	return books, nil
+}

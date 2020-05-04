@@ -27,6 +27,7 @@ var (
 		{"author <author>", "search by author", "author a"},
 		{"bookid <ISBN>", "get bookid of books whose ISBN is <ISBN>", "bookid abc"},
 		{"duedate <bookid>", "query the duedate of a borrowed book", "duedate 1"},
+		{"topten", "query the top10 bestsellers", "topten"},
 	}
 	helpforuser = []MyHelp{
 		{"quit", "quit", "quit"},
@@ -43,6 +44,7 @@ var (
 		{"list", "query your borrow record", "list"},
 		{"duedate <bookid>", "query the duedate of a borrowed book", "duedate 1"},
 		{"overdue", "query overdue books of your account", "overdue"},
+		{"topten", "query the top10 bestsellers", "topten"},
 	}
 	helpforroot = []MyHelp{
 		{"quit", "quit", "quit"},
@@ -65,6 +67,7 @@ var (
 		{"add sbooks [filepath]", "add singlebook from csv file, default filepath'../data/sbooks.csv'", "add sbooks"},
 		{"list [username]", "query borrow record of [username], default yours", "list 18307130001"},
 		{"overdue [username]", "query overdue books of the account, default yours", "overdue 18307130001"},
+		{"topten", "query the top10 bestsellers", "topten"},
 	}
 )
 
@@ -489,6 +492,16 @@ func handleinput(input string, lib *Library) {
 		} else {
 			Help()
 		}
+	case "topten":
+		if len(args) == 1 {
+			books, err := topten(lib)
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				table.OutputA(books)
+			}
+		}
+
 	default:
 		Help()
 	}

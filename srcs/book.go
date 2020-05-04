@@ -16,15 +16,21 @@ type SingleBook struct {
 	Available int
 }
 type Bookwithdate struct {
-	Bookid string
-	Title  string
-	ISBN   string
-	Date   string
+	Bookid  string
+	Title   string
+	ISBN    string
+	DueDate string
 }
 type Bookforappoint struct {
 	Bookid string
 	Title  string
 	ISBN   string
+}
+type Bookwithvisit struct {
+	Title  string
+	Author string
+	ISBN   string
+	rank   int
 }
 
 // drop table booklist and singlebook
