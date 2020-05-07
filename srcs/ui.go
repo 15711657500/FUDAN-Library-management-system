@@ -250,7 +250,11 @@ func handleinput(input string, lib *Library) {
 							Help()
 							return
 						}
-						adduser(&User{u, p, r}, lib)
+						err = adduser(&User{u, p, r}, lib)
+						if err != nil {
+							fmt.Println(err.Error())
+							fmt.Println(unexpectederror)
+						}
 					}
 				case "users":
 					if len(args) > 3 {

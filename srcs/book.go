@@ -33,6 +33,10 @@ type Bookwithvisit struct {
 	rank   int
 }
 
+var (
+	notreturned = fmt.Errorf("removed of not returned")
+)
+
 // drop table booklist and singlebook
 func resetbook(lib *Library) error {
 
@@ -109,7 +113,7 @@ func removesinglebook(bookid string, detail string, lib *Library) error {
 			return err
 		}
 		if i != 0 {
-			return fmt.Errorf("removed of not returned")
+			return notreturned
 		}
 	}
 	exec := fmt.Sprintf("insert ignore into removelist(bookid, detail) values ('%s','%s')", bookid, detail)
@@ -117,7 +121,7 @@ func removesinglebook(bookid string, detail string, lib *Library) error {
 	if err != nil {
 		return err
 	}
-	exec2 := fmt.Sprintf("update booklist set available = 0 where bookid = '%s'", bookid)
+	exec2 := fmt.Sprintf("update singlebook set available = 0 where bookid = '%s'", bookid)
 	_, err = lib.db.Exec(exec2)
 	return err
 }

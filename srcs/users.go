@@ -57,27 +57,27 @@ func getSHA256(input string) string {
 // add an account to table users
 func adduser(user *User, lib *Library) error {
 	username1, password1, root1 := user.username, user.password, user.root
-	query := fmt.Sprintf("select count(*) from users where username = '%s'", username1)
-	rows, err := lib.db.Queryx(query)
-	if err != nil {
-		return err
-	}
-	j := 0
-	rows.Next()
-	err = rows.Scan(&j)
-
-	if err != nil {
-		return err
-	}
-	if j != 0 {
-		err = fmt.Errorf("already exists")
-		return err
-	}
+	//query := fmt.Sprintf("select count(*) from users where username = '%s'", username1)
+	//rows, err := lib.db.Queryx(query)
+	//if err != nil {
+	//	return err
+	//}
+	//j := 0
+	//rows.Next()
+	//err = rows.Scan(&j)
+	//
+	//if err != nil {
+	//	return err
+	//}
+	//if j != 0 {
+	//	err = fmt.Errorf("already exists")
+	//	return err
+	//}
 	password1 = getSHA256(password1)
 
 	exec := fmt.Sprintf("insert ignore into users(username, password, root) values ('%s', '%s', '%d')", username1, password1, root1)
 
-	_, err = lib.db.Exec(exec)
+	_, err := lib.db.Exec(exec)
 	if err != nil {
 		return err
 	}
@@ -171,4 +171,10 @@ func checkpassword(username string, password string, lib *Library) (bool, error)
 		}
 	}
 	return false, nil
+}
+
+func logout() {
+	username = "visitor"
+	root = 0
+	visitor = true
 }
