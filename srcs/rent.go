@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	du         time.Duration = 30
+	du         time.Duration = -1
 	maxrent    int           = 30
 	maxoverdue int           = 3
 	fineperday float32       = 0.1

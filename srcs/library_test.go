@@ -6,9 +6,9 @@ import (
 )
 
 /* If the tables are initially not empty,
- * the primary key of existing items may contradict with item to be added
- * and causes error in tests
- * I won't drop the tables in this test, but you should be cautious to this
+* the primary key of existing items may contradict with item to be added
+* and causes error in tests
+* I won't drop the tables in this test, but you should be cautious to this
  */
 
 // create tables
@@ -453,6 +453,7 @@ func TestRemovebooks(t *testing.T) {
 	}{
 		{"4", "lost", notreturned}, // book 4 was borrowed by 18307130002 and not returned
 		{"5", "lost", nil},
+		{"this book does not exist", "lost", booknotfound},
 	}
 	for _, value := range removelist {
 		err = removesinglebook(value.bookid, value.datail, &lib)
@@ -504,6 +505,32 @@ func TestReadfromfile(t *testing.T) {
 				t.Errorf("read csv file error!")
 				break
 			}
+		}
+	}
+}
+
+func TestChangePassword(t *testing.T) {
+	lib := Library{}
+	err := lib.ConnectDB()
+	if err != nil {
+		t.Errorf("Unable to connect")
+		return
+	}
+	err = changepassword("18307130002", "1234", &lib)
+	if err != nil {
+		t.Errorf("change password error")
+	}
+	trials := []struct {
+		password string
+		err      error
+	}{
+		{"1111", loginerror}, //initial password
+		{"1234", nil},        //new password
+	}
+	for _, value := range trials {
+		err = login(&User{"18307130002", value.password, 1}, &lib)
+		if !(err == nil && value.err == nil) && !(err != nil && value.err != nil && err.Error() == value.err.Error()) {
+			t.Errorf("change password error")
 		}
 	}
 }

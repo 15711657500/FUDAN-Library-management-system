@@ -101,19 +101,34 @@ func addsinglebook(book *SingleBook, lib *Library) error {
 
 // add a singlebook to removelist and set available = 0 in table singlebook
 func removesinglebook(bookid string, detail string, lib *Library) error {
-	query := fmt.Sprintf("select count(*) from rent where bookid = '%s' and returndate = 'not returned yet'", bookid)
-	rows, err := lib.db.Queryx(query)
+	query1 := fmt.Sprintf("select count(*) from rent where bookid = '%s' and returndate = 'not returned yet'", bookid)
+	rows1, err := lib.db.Queryx(query1)
 	if err != nil {
 		return err
 	}
-	for rows.Next() {
+	for rows1.Next() {
 		var i int
-		err = rows.Scan(&i)
+		err = rows1.Scan(&i)
 		if err != nil {
 			return err
 		}
 		if i != 0 {
 			return notreturned
+		}
+	}
+	query2 := fmt.Sprintf("select count(*) from singlebook where bookid = '%s'", bookid)
+	rows2, err := lib.db.Queryx(query2)
+	if err != nil {
+		return err
+	}
+	for rows2.Next() {
+		var i int
+		err = rows2.Scan(&i)
+		if err != nil {
+			return err
+		}
+		if i == 0 {
+			return booknotfound
 		}
 	}
 	exec := fmt.Sprintf("insert ignore into removelist(bookid, detail) values ('%s','%s')", bookid, detail)

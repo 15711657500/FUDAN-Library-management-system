@@ -45,6 +45,7 @@ var (
 		{"duedate <bookid>", "query the duedate of a borrowed book", "duedate 1"},
 		{"overdue", "query overdue books of your account", "overdue"},
 		{"topten", "query the top10 bestsellers", "topten"},
+		{"unreturn", "query the unreturned books of your acoount", "unreturn"},
 	}
 	helpforroot = []MyHelp{
 		{"quit", "quit", "quit"},
@@ -68,6 +69,8 @@ var (
 		{"list [username]", "query borrow record of [username], default yours", "list 18307130001"},
 		{"overdue [username]", "query overdue books of the account, default yours", "overdue 18307130001"},
 		{"topten", "query the top10 bestsellers", "topten"},
+		{"remove <bookid> <detail>", "remove a singlebook with detail", "remove 3 lost"},
+		{"unreturn [username]", "query unreturned books of a user, default yours", "unreturn"},
 	}
 )
 
@@ -505,7 +508,67 @@ func handleinput(input string, lib *Library) {
 				table.OutputA(books)
 			}
 		}
-
+	case "remove":
+		if visitor || root == 0 {
+			Help()
+		} else {
+			if len(args) < 3 {
+				Help()
+			} else {
+				detail := ""
+				for _, value := range args[2:] {
+					detail = detail + value + " "
+				}
+				err := removesinglebook(args[1], detail, lib)
+				if err != nil {
+					switch err.Error() {
+					case booknotfound.Error():
+						fmt.Println(booknotfound.Error())
+					case notreturned.Error():
+						fmt.Println(notreturned.Error())
+					default:
+						fmt.Println(err.Error())
+						fmt.Println(unexpectederror)
+					}
+				}
+			}
+		}
+	case "unreturned":
+		if visitor {
+			Help()
+		} else if root == 0 {
+			if len(args) != 1 {
+				Help()
+			} else {
+				rents, err := querynotreturned(username, lib)
+				if err != nil {
+					fmt.Println(err.Error())
+					fmt.Println(unexpectederror)
+				} else {
+					outputrent(&rents)
+				}
+			}
+		} else {
+			if len(args) > 2 {
+				Help()
+			} else if len(args) == 2 {
+				rents, err := querynotreturned(args[1], lib)
+				if err != nil {
+					fmt.Println(err.Error())
+					fmt.Println(unexpectederror)
+				} else {
+					outputrent(&rents)
+				}
+			} else {
+				rents, err := querynotreturned(username, lib)
+				if err != nil {
+					fmt.Println(err.Error())
+					fmt.Println(unexpectederror)
+				} else {
+					outputrent(&rents)
+				}
+			}
+		}
 	default:
 		Help()
 	}
@@ -557,11 +620,11 @@ func disableecho(b bool) {
 			[]string{"stty", "-echo"},
 			&attrs)
 		if err != nil {
-			panic(err)
+			return
 		}
 		_, err = syscall.Wait4(pid, &ws, 0, nil)
 		if err != nil {
-			panic(err)
+			return
 		}
 	} else {
 		attrs := syscall.ProcAttr{
@@ -575,11 +638,11 @@ func disableecho(b bool) {
 			[]string{"stty", "echo"},
 			&attrs)
 		if err != nil {
-			panic(err)
+			return
 		}
 		_, err = syscall.Wait4(pid, &ws, 0, nil)
 		if err != nil {
-			panic(err)
+			return
 		}
 	}
 
