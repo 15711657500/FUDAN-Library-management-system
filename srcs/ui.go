@@ -376,7 +376,8 @@ func handleinput(input string, lib *Library) {
 			check, err := checkpassword(username, curp1, lib)
 			fmt.Println("")
 			if err != nil {
-				//TODO:
+				fmt.Println(err.Error())
+				fmt.Println(unexpectederror)
 				return
 			}
 			if !check {
